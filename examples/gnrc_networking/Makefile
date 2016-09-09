@@ -48,7 +48,12 @@ CFLAGS += -DDEVELHELP
 
 # Uncomment this to join RPL DODAGs even if DIOs do not contain
 # DODAG Configuration Options (see the doc for more info)
-# CFLAGS += -DGNRC_RPL_DODAG_CONF_OPTIONAL_ON_JOIN
+CFLAGS += -DGNRC_RPL_DODAG_CONF_OPTIONAL_ON_JOIN
+CFLAGS += -DGNRC_RPL_DENY_PARENT_L2ADDR=\"18:C0:FF:EE:C0:FF:EE:01\"
+CFLAGS += -DGNRC_RPL_MIN_LQI=32
+CFLAGS += -DDEFAULT_TX_POWER=-16
+CFLAGS += -DGNRC_RPL_DEFAULT_LIFETIME=15
+CFLAGS += -DGNRC_RPL_DEFAULT_DIO_INTERVAL_DOUBLINGS=13
 
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1

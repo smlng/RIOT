@@ -28,6 +28,15 @@
 
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
+#ifndef GNRC_RPL_DENY_PARENT_L2ADDR
+#define GNRC_RPL_DENY_PARENT_L2ADDR    "00:00:00:00:00:00:00:00"
+#endif
+#ifndef GNRC_RPL_MIN_LQI
+#define GNRC_RPL_MIN_LQI        (0)
+#endif
+#define MAX_L2_ADDR_LEN         (8U)
+
+static uint8_t deny_parent_l2addr[MAX_L2_ADDR_LEN];
 
 static char _stack[GNRC_RPL_STACK_SIZE];
 kernel_pid_t gnrc_rpl_pid = KERNEL_PID_UNDEF;
@@ -54,6 +63,10 @@ static void *_event_loop(void *args);
 
 kernel_pid_t gnrc_rpl_init(kernel_pid_t if_pid)
 {
+    gnrc_netif_addr_from_str(deny_parent_l2addr, sizeof(deny_parent_l2addr), GNRC_RPL_DENY_PARENT_L2ADDR);
+    char addr_str[GNRC_NETIF_HDR_L2ADDR_PRINT_LEN];
+    gnrc_netif_addr_to_str(addr_str, sizeof(addr_str), deny_parent_l2addr, sizeof(deny_parent_l2addr));
+    printf("RPL: set deny_parent_l2addr %s\n", addr_str);
     /* check if RPL was initialized before */
     if (gnrc_rpl_pid == KERNEL_PID_UNDEF) {
         _instance_id = 0;
@@ -142,7 +155,21 @@ static void _receive(gnrc_pktsnip_t *icmpv6)
     assert(ipv6 != NULL);
 
     if (netif) {
-        iface = ((gnrc_netif_hdr_t *)netif->data)->if_pid;
+        gnrc_netif_hdr_t *netif_hdr = (gnrc_netif_hdr_t *)netif->data;
+        iface = netif_hdr->if_pid;
+        /* drop packet if from blacklisted parent */
+        uint8_t *_src_addr = gnrc_netif_hdr_get_src_addr(netif_hdr);
+        if (memcmp(deny_parent_l2addr, _src_addr, MAX_L2_ADDR_LEN) == 0) {
+            printf("RPL: deny_parent_addr\n");
+            gnrc_pktbuf_release(icmpv6);
+            return;
+        }
+        /* drop packet, on low LQI */
+        if ((netif_hdr->lqi != 0) && (netif_hdr->lqi < GNRC_RPL_MIN_LQI)) {
+            printf("RPL: low packet LQI\n");
+            gnrc_pktbuf_release(icmpv6);
+            return;
+        }
     }
 
     ipv6_hdr = (ipv6_hdr_t *)ipv6->data;
