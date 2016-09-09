@@ -160,7 +160,7 @@ static void _receive(gnrc_pktsnip_t *icmpv6)
         /* drop packet if from blacklisted parent */
         uint8_t *_src_addr = gnrc_netif_hdr_get_src_addr(netif_hdr);
         if (memcmp(deny_parent_l2addr, _src_addr, MAX_L2_ADDR_LEN) == 0) {
-            printf("RPL: deny_parent_addr\n");
+            DEBUG("RPL: deny_parent_addr\n");
             gnrc_pktbuf_release(icmpv6);
             return;
         }

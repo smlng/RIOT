@@ -330,6 +330,7 @@ static inline bool GNRC_RPL_COUNTER_GREATER_THAN(uint8_t A, uint8_t B)
 #endif
 #ifndef GNRC_RPL_DEFAULT_WAIT_FOR_DAO_ACK
 #define GNRC_RPL_DEFAULT_WAIT_FOR_DAO_ACK (3)
+<<<<<<< b59336b0045cfc524cddc5e7637425ae4e67c0bb
 #endif
 #ifndef GNRC_RPL_REGULAR_DAO_INTERVAL
 #define GNRC_RPL_REGULAR_DAO_INTERVAL (60)
@@ -337,6 +338,10 @@ static inline bool GNRC_RPL_COUNTER_GREATER_THAN(uint8_t A, uint8_t B)
 #ifndef GNRC_RPL_DEFAULT_DAO_DELAY
 #define GNRC_RPL_DEFAULT_DAO_DELAY (1)
 #endif
+=======
+#define GNRC_RPL_REGULAR_DAO_INTERVAL (13)
+#define GNRC_RPL_DEFAULT_DAO_DELAY (1)
+>>>>>>> fix some timer values, add second Makefile disables parent hack
 /** @} */
 
 /**
