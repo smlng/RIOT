@@ -35,13 +35,6 @@ USEMODULE += netstats_l2
 USEMODULE += netstats_ipv6
 USEMODULE += netstats_rpl
 
-<<<<<<< HEAD
-=======
-# Set a custom 802.15.4 channel if needed
-DEFAULT_CHANNEL ?= 11
-CFLAGS += -DDEFAULT_CHANNEL=$(DEFAULT_CHANNEL)
-
->>>>>>> fix some timer values, add second Makefile disables parent hack
 # Comment this out to disable code in RIOT that does safety checking
 # which is not needed in a production environment but helps in the
 # development process:
