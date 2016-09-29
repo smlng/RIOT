@@ -25,21 +25,29 @@
 static gnrc_sixlowpan_nd_router_abr_t _abrs[GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF];
 static gnrc_sixlowpan_nd_router_prf_t _prefixes[GNRC_SIXLOWPAN_ND_ROUTER_ABR_PRF_NUMOF];
 
-static gnrc_sixlowpan_nd_router_abr_t *_get_abr(ipv6_addr_t *addr)
+static void _init_abr(const ipv6_addr_t *addr, gnrc_sixlowpan_nd_router_abr_t *abr)
 {
-    gnrc_sixlowpan_nd_router_abr_t *abr = NULL;
+    abr->addr.u64[0] = addr->u64[0];
+    abr->addr.u64[1] = addr->u64[1];
+    abr->ltime = 0;
+    abr->version = 0;
+    abr->prfs = NULL;
+    memset(abr->ctxs, 0, sizeof(abr->ctxs));
+}
 
+static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
+{
     for (int i = 0; i < GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF; i++) {
         if (ipv6_addr_equal(&_abrs[i].addr, addr)) {
             return &_abrs[i];
         }
-
-        if ((abr == NULL) && ipv6_addr_is_unspecified(&_abrs[i].addr)) {
-            abr = &_abrs[i];
+        else if (ipv6_addr_is_unspecified(&_abrs[i].addr)) {
+            /* unused abr found, fresh init */
+            _init_abr(addr, &_abrs[i]);
+            return &_abrs[i];
         }
     }
-
-    return abr;
+    return NULL;
 }
 
 static gnrc_sixlowpan_nd_router_prf_t *_get_free_prefix(gnrc_ipv6_netif_t *ipv6_iface,
@@ -193,27 +201,29 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
     uint8_t *buf = (uint8_t *)(rtr_adv + 1);
     gnrc_sixlowpan_nd_router_abr_t *abr;
     uint32_t t = 0;
+    uint32_t version;
 
     if (_is_me(&abr_opt->braddr)) {
         return;
     }
-    /* validity and version was checked in previously called
-     * gnrc_sixlowpan_nd_router_abr_older() */
-    abr = _get_abr(&abr_opt->braddr);
-
-    if (abr == NULL) {
+    /* get existing abro or a fresh one */
+    if ((abr = _get_abr(&abr_opt->braddr)) == NULL) {
         return;
     }
-
+    /* verify ABRO version is newer, than existing one */
+    version = (uint32_t)byteorder_ntohs(abr_opt->vlow);
+    version |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
+    if (version < abr->version) {
+        return;
+    }
+    abr->version = version;
+    /* set ABRO lifetime */
     abr->ltime = byteorder_ntohs(abr_opt->ltime);
-
     if (abr->ltime == 0) {
         abr->ltime = GNRC_SIXLOWPAN_ND_BORDER_ROUTER_DEFAULT_LTIME;
-        return;
     }
 
     sicmpv6_size -= sizeof(ndp_rtr_adv_t);
-
     while (sicmpv6_size > 0) {
         ndp_opt_t *opt = (ndp_opt_t *)(buf + opt_offset);
 
@@ -231,16 +241,8 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
         opt_offset += (opt->len * 8);
         sicmpv6_size -= (opt->len * 8);
     }
-
-    abr->version = (uint32_t)byteorder_ntohs(abr_opt->vlow);
-    abr->version |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
-    abr->addr.u64[0] = abr_opt->braddr.u64[0];
-    abr->addr.u64[1] = abr_opt->braddr.u64[1];
-    memset(abr->ctxs, 0, sizeof(abr->ctxs));
-    abr->prfs = NULL;
-
+    /* init abr removal timer */
     t = abr->ltime * 60 * SEC_IN_USEC;
-
     xtimer_remove(&abr->ltimer);
     abr->ltimer_msg.type = GNRC_SIXLOWPAN_ND_MSG_ABR_TIMEOUT;
     abr->ltimer_msg.content.ptr = abr;
@@ -297,10 +299,6 @@ gnrc_sixlowpan_nd_router_abr_t *gnrc_sixlowpan_nd_router_abr_create(ipv6_addr_t 
     /* TODO: store and get this somewhere stable */
     abr->version = 0;
     abr->ltime = (uint16_t)ltime;
-    abr->addr.u64[0] = addr->u64[0];
-    abr->addr.u64[1] = addr->u64[1];
-    memset(abr->ctxs, 0, sizeof(abr->ctxs));
-    abr->prfs = NULL;
     return abr;
 }
 
