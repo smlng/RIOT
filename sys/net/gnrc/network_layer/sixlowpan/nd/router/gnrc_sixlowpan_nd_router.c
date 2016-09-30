@@ -34,7 +34,7 @@ static gnrc_sixlowpan_nd_router_prf_t _prefixes[GNRC_SIXLOWPAN_ND_ROUTER_ABR_PRF
 
 static void _init_abr(const ipv6_addr_t *addr, gnrc_sixlowpan_nd_router_abr_t *abr)
 {
-    DEBUG("sixlowpan_nd_router: init new ABRO\n");
+    DEBUG("6lo nd router: init new ABRO\n");
     abr->addr.u64[0] = addr->u64[0];
     abr->addr.u64[1] = addr->u64[1];
     abr->ltime = 0;
@@ -45,7 +45,7 @@ static void _init_abr(const ipv6_addr_t *addr, gnrc_sixlowpan_nd_router_abr_t *a
 
 static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
 {
-    DEBUG("sixlowpan_nd_router: get ABRO for  %s.\n",
+    DEBUG("6lo nd router: get ABRO for  %s.\n",
           ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
     for (int i = 0; i < GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF; i++) {
         if (ipv6_addr_equal(&_abrs[i].addr, addr)) {
@@ -214,30 +214,31 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
     uint32_t version;
 
     if (_is_me(&abr_opt->braddr)) {
-        DEBUG("sixlowpan_nd_router, opt_abr_handle: its me.\n");
+        DEBUG("6lo nd router, opt_abr_handle: its me.\n");
         return;
     }
     /* get existing abro or a fresh one */
     if ((abr = _get_abr(&abr_opt->braddr)) == NULL) {
-        DEBUG("sixlowpan_nd_router, opt_abr_handle: cannot store ABRO.\n");
+        DEBUG("6lo nd router, opt_abr_handle: cannot store ABRO.\n");
         return;
     }
-    DEBUG("sixlowpan_nd_router, opt_abr_handle: found ABRO for  %s.\n",
+    DEBUG("6lo nd router, opt_abr_handle: found ABRO for  %s.\n",
           ipv6_addr_to_str(addr_str, &abr->addr, sizeof(addr_str)));
     /* verify ABRO version is newer, than existing one */
     version = (uint32_t)byteorder_ntohs(abr_opt->vlow);
     version |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
     if (version < abr->version) {
-        DEBUG("sixlowpan_nd_router, opt_abr_handle: ABRO older.\n");
+        DEBUG("6lo nd router, opt_abr_handle: older version (%"PRIu32" < %"PRIu32").\n", version, abr->version);
         return;
     }
     abr->version = version;
+    DEBUG("6lo nd router, opt_abr_handle: version %"PRIu32"\n", abr->version);
     /* set ABRO lifetime */
     abr->ltime = byteorder_ntohs(abr_opt->ltime);
     if (abr->ltime == 0) {
         abr->ltime = GNRC_SIXLOWPAN_ND_BORDER_ROUTER_DEFAULT_LTIME;
     }
-
+    DEBUG("6lo nd router, opt_abr_handle: lifetime %"PRIu16"\n", abr->ltime);
     sicmpv6_size -= sizeof(ndp_rtr_adv_t);
     while (sicmpv6_size > 0) {
         ndp_opt_t *opt = (ndp_opt_t *)(buf + opt_offset);
@@ -297,8 +298,13 @@ gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_abr_build(uint32_t version, uint16_t ltime
         abr_opt->ltime = byteorder_htons(ltime);
         abr_opt->braddr.u64[0] = braddr->u64[0];
         abr_opt->braddr.u64[1] = braddr->u64[1];
-        DEBUG("sixlowpan_nd_router, opt_abr_build: %s.\n",
-              ipv6_addr_to_str(addr_str, &abr_opt->braddr, sizeof(addr_str)));
+#if ENABLE_DEBUG
+        uint32_t tmpver;
+        tmpver = (uint32_t)byteorder_ntohs(abr_opt->vlow);
+        tmpver |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
+#endif
+        DEBUG("6lo nd router, opt_abr_build: for %s with version %"PRIu32" and ltime %"PRIu16".\n",
+              ipv6_addr_to_str(addr_str, &abr_opt->braddr, sizeof(addr_str)), tmpver, byteorder_ntohs(abr_opt->ltime));
     }
 
     return pkt;
