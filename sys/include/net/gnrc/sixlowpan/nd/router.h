@@ -134,18 +134,6 @@ void gnrc_sixlowpan_nd_router_set_rtr_adv(gnrc_ipv6_netif_t *netif, bool enable)
 gnrc_sixlowpan_nd_router_abr_t *gnrc_sixlowpan_nd_router_abr_get(void);
 
 /**
- * @brief   Checks if the version data @p abr_opt is older than the version of the currently
- *          registered border router.
- *
- * @param[in] abr_opt   An authoritative border router option containing potentially new
- *                      information on the currently registered border router.
- *
- * @return  true, if the information in @p abr_opt is newer.
- * @return  false, if the information in @p abr_opt is older.
- */
-bool gnrc_sixlowpan_nd_router_abr_older(sixlowpan_nd_opt_abr_t *abr_opt);
-
-/**
  * @brief   Removes the border router and all the prefixes and contexts it disseminated through
  *          the network for this node.
  *

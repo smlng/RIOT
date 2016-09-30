@@ -156,32 +156,6 @@ gnrc_sixlowpan_nd_router_abr_t *gnrc_sixlowpan_nd_router_abr_get(void)
     return _abrs;
 }
 
-bool gnrc_sixlowpan_nd_router_abr_older(sixlowpan_nd_opt_abr_t *abr_opt)
-{
-    gnrc_sixlowpan_nd_router_abr_t *abr;
-    uint32_t version;
-
-    if (abr_opt->len != SIXLOWPAN_ND_OPT_ABR_LEN) {
-        /* invalid option received */
-        return true;
-    }
-
-    if (_is_me(&abr_opt->braddr)) {
-        return false;
-    }
-
-    abr = _get_abr(&abr_opt->braddr);
-
-    if (abr == NULL) {
-        return false;
-    }
-
-    version = (uint32_t)byteorder_ntohs(abr_opt->vlow);
-    version |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
-
-    return (version < abr->version);
-}
-
 void gnrc_sixlowpan_nd_router_abr_remove(gnrc_sixlowpan_nd_router_abr_t *abr)
 {
     for (int i = 0; i < GNRC_SIXLOWPAN_CTX_SIZE; i++) {
