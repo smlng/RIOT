@@ -22,11 +22,19 @@
 
 #include "net/gnrc/sixlowpan/nd/router.h"
 
+#define ENABLE_DEBUG    (1)
+#include "debug.h"
+
+#if ENABLE_DEBUG
+static char addr_str[IPV6_ADDR_MAX_STR_LEN];
+#endif
+
 static gnrc_sixlowpan_nd_router_abr_t _abrs[GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF];
 static gnrc_sixlowpan_nd_router_prf_t _prefixes[GNRC_SIXLOWPAN_ND_ROUTER_ABR_PRF_NUMOF];
 
 static void _init_abr(const ipv6_addr_t *addr, gnrc_sixlowpan_nd_router_abr_t *abr)
 {
+    DEBUG("sixlowpan_nd_router: init new ABRO\n");
     abr->addr.u64[0] = addr->u64[0];
     abr->addr.u64[1] = addr->u64[1];
     abr->ltime = 0;
@@ -37,6 +45,8 @@ static void _init_abr(const ipv6_addr_t *addr, gnrc_sixlowpan_nd_router_abr_t *a
 
 static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
 {
+    DEBUG("sixlowpan_nd_router: get ABRO for  %s.\n",
+          ipv6_addr_to_str(addr_str, addr, sizeof(addr_str)));
     for (int i = 0; i < GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF; i++) {
         if (ipv6_addr_equal(&_abrs[i].addr, addr)) {
             return &_abrs[i];
@@ -204,16 +214,21 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
     uint32_t version;
 
     if (_is_me(&abr_opt->braddr)) {
+        DEBUG("sixlowpan_nd_router, opt_abr_handle: its me.\n");
         return;
     }
     /* get existing abro or a fresh one */
     if ((abr = _get_abr(&abr_opt->braddr)) == NULL) {
+        DEBUG("sixlowpan_nd_router, opt_abr_handle: cannot store ABRO.\n");
         return;
     }
+    DEBUG("sixlowpan_nd_router, opt_abr_handle: found ABRO for  %s.\n",
+          ipv6_addr_to_str(addr_str, &abr->addr, sizeof(addr_str)));
     /* verify ABRO version is newer, than existing one */
     version = (uint32_t)byteorder_ntohs(abr_opt->vlow);
     version |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
     if (version < abr->version) {
+        DEBUG("sixlowpan_nd_router, opt_abr_handle: ABRO older.\n");
         return;
     }
     abr->version = version;
@@ -282,6 +297,8 @@ gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_abr_build(uint32_t version, uint16_t ltime
         abr_opt->ltime = byteorder_htons(ltime);
         abr_opt->braddr.u64[0] = braddr->u64[0];
         abr_opt->braddr.u64[1] = braddr->u64[1];
+        DEBUG("sixlowpan_nd_router, opt_abr_build: %s.\n",
+              ipv6_addr_to_str(addr_str, &abr_opt->braddr, sizeof(addr_str)));
     }
 
     return pkt;
