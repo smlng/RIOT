@@ -55,8 +55,8 @@ static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
     return NULL;
 }
 
-static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(gnrc_ipv6_netif_t *ipv6_iface,
-                                                   gnrc_ipv6_netif_addr_t *prefix)
+static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(const gnrc_ipv6_netif_t *ipv6_iface,
+                                                   const gnrc_ipv6_netif_addr_t *prefix)
 {
     DEBUG("6lo nd router: get prefix for  %s.\n",
           ipv6_addr_to_str(addr_str, &(prefix->addr), sizeof(addr_str)));
@@ -81,9 +81,9 @@ static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(gnrc_ipv6_netif_t *ipv6_iface
     return NULL;
 }
 
-static void _abr_add_prefix(kernel_pid_t iface,
-                            gnrc_sixlowpan_nd_router_abr_t *abr,
-                            ndp_opt_pi_t *pi_opt)
+static void _abr_add_prefix(const kernel_pid_t iface,
+                            const ndp_opt_pi_t *pi_opt,
+                            gnrc_sixlowpan_nd_router_abr_t *abr)
 {
     gnrc_ipv6_netif_t *ipv6_iface = gnrc_ipv6_netif_get(iface);
     ipv6_addr_t *prefix;
@@ -109,7 +109,8 @@ static void _abr_add_prefix(kernel_pid_t iface,
     }
 }
 
-static void _abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, sixlowpan_nd_opt_6ctx_t *ctx_opt)
+static void _abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr,
+                         sixlowpan_nd_opt_6ctx_t *ctx_opt)
 {
     DEBUG("6lo nd router: add CTX to ABRO\n");
     DEBUG(" -- ABRO %s\n", ipv6_addr_to_str(addr_str, &(abr->addr), sizeof(addr_str)));
@@ -134,8 +135,9 @@ static inline bool _is_me(ipv6_addr_t *addr)
 
 void gnrc_sixlowpan_nd_router_set_rtr_adv(gnrc_ipv6_netif_t *netif, bool enable)
 {
-    if (enable && (gnrc_ipv6_netif_add_addr(netif->pid, &ipv6_addr_all_routers_link_local, 128,
-                                            GNRC_IPV6_NETIF_ADDR_FLAGS_NON_UNICAST) != NULL)) {
+    if (enable &&
+        gnrc_ipv6_netif_add_addr(netif->pid, &ipv6_addr_all_routers_link_local,
+                                 128, GNRC_IPV6_NETIF_ADDR_FLAGS_NON_UNICAST)) {
         mutex_lock(&netif->mutex);
         netif->flags |= GNRC_IPV6_NETIF_FLAGS_RTR_ADV;
         netif->adv_ltime = GNRC_IPV6_NETIF_DEFAULT_ROUTER_LTIME;
@@ -182,7 +184,9 @@ void gnrc_sixlowpan_nd_router_abr_remove(gnrc_sixlowpan_nd_router_abr_t *abr)
 }
 
 /* router-only functions from net/gnrc/sixlowpan/nd.h */
-void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv, int sicmpv6_size,
+void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface,
+                                      ndp_rtr_adv_t *rtr_adv,
+                                      int sicmpv6_size,
                                       sixlowpan_nd_opt_abr_t *abr_opt)
 {
     uint16_t opt_offset = 0;
@@ -223,7 +227,7 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
 
         switch (opt->type) {
             case NDP_OPT_PI:
-                _abr_add_prefix(iface, abr, (ndp_opt_pi_t *)opt);
+                _abr_add_prefix(iface, (ndp_opt_pi_t *)opt, abr);
 
             case NDP_OPT_6CTX:
                 _abr_add_ctx(abr, (sixlowpan_nd_opt_6ctx_t *)opt);
@@ -243,8 +247,11 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
     xtimer_set_msg(&abr->ltimer, t, &abr->ltimer_msg, gnrc_ipv6_pid);
 }
 
-gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_6ctx_build(uint8_t prefix_len, uint8_t flags, uint16_t ltime,
-                                                 ipv6_addr_t *prefix, gnrc_pktsnip_t *next)
+gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_6ctx_build(uint8_t prefix_len,
+                                                 uint8_t flags,
+                                                 uint16_t ltime,
+                                                 ipv6_addr_t *prefix,
+                                                 gnrc_pktsnip_t *next)
 {
     gnrc_pktsnip_t *pkt = gnrc_ndp_opt_build(NDP_OPT_6CTX,
                                              sizeof(sixlowpan_nd_opt_6ctx_t) + (prefix_len / 8),
@@ -264,8 +271,10 @@ gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_6ctx_build(uint8_t prefix_len, uint8_t fla
     return pkt;
 }
 
-gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_abr_build(uint32_t version, uint16_t ltime,
-                                                ipv6_addr_t *braddr, gnrc_pktsnip_t *next)
+gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_abr_build(uint32_t version,
+                                                uint16_t ltime,
+                                                ipv6_addr_t *braddr,
+                                                gnrc_pktsnip_t *next)
 {
     gnrc_pktsnip_t *pkt = gnrc_ndp_opt_build(NDP_OPT_ABR, sizeof(sixlowpan_nd_opt_abr_t), next);
 
@@ -282,7 +291,8 @@ gnrc_pktsnip_t *gnrc_sixlowpan_nd_opt_abr_build(uint32_t version, uint16_t ltime
         tmpver |= ((uint32_t)byteorder_ntohs(abr_opt->vhigh)) << 16;
 #endif
         DEBUG("6lo nd router, opt_abr_build: for %s with version %"PRIu32" and ltime %"PRIu16".\n",
-              ipv6_addr_to_str(addr_str, &abr_opt->braddr, sizeof(addr_str)), tmpver, byteorder_ntohs(abr_opt->ltime));
+              ipv6_addr_to_str(addr_str, &abr_opt->braddr, sizeof(addr_str)),
+              tmpver, byteorder_ntohs(abr_opt->ltime));
     }
 
     return pkt;
@@ -304,7 +314,8 @@ gnrc_sixlowpan_nd_router_abr_t *gnrc_sixlowpan_nd_router_abr_create(ipv6_addr_t 
 }
 
 int gnrc_sixlowpan_nd_router_abr_add_prf(gnrc_sixlowpan_nd_router_abr_t* abr,
-                                         gnrc_ipv6_netif_t *iface, gnrc_ipv6_netif_addr_t *prefix)
+                                         gnrc_ipv6_netif_t *iface,
+                                         gnrc_ipv6_netif_addr_t *prefix)
 {
     assert((iface != NULL) && (prefix != NULL));
     gnrc_sixlowpan_nd_router_prf_t *prf_ent;
@@ -322,9 +333,9 @@ int gnrc_sixlowpan_nd_router_abr_add_prf(gnrc_sixlowpan_nd_router_abr_t* abr,
     return 0;
 }
 
-
 void gnrc_sixlowpan_nd_router_abr_rem_prf(gnrc_sixlowpan_nd_router_abr_t *abr,
-                                          gnrc_ipv6_netif_t *iface, gnrc_ipv6_netif_addr_t *prefix)
+                                          gnrc_ipv6_netif_t *iface,
+                                          gnrc_ipv6_netif_addr_t *prefix)
 {
     assert((iface != NULL) && (prefix != NULL));
     gnrc_sixlowpan_nd_router_prf_t *prf_ent = abr->prfs, *prev = NULL;
@@ -350,7 +361,8 @@ void gnrc_sixlowpan_nd_router_abr_rem_prf(gnrc_sixlowpan_nd_router_abr_t *abr,
     }
 }
 
-int gnrc_sixlowpan_nd_router_abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, uint8_t cid)
+int gnrc_sixlowpan_nd_router_abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr,
+                                         uint8_t cid)
 {
     if ((abr < _abrs) || (abr > (_abrs + GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF))) {
         return -ENOENT;
@@ -366,7 +378,8 @@ int gnrc_sixlowpan_nd_router_abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, ui
     return 0;
 }
 
-void gnrc_sixlowpan_nd_router_abr_rem_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, uint8_t cid)
+void gnrc_sixlowpan_nd_router_abr_rem_ctx(gnrc_sixlowpan_nd_router_abr_t *abr,
+                                          uint8_t cid)
 {
     if ((abr < _abrs) || (abr > (_abrs + GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF))) {
         return;
