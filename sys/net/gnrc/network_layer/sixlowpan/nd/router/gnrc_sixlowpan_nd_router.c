@@ -32,18 +32,6 @@ static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 static gnrc_sixlowpan_nd_router_abr_t _abrs[GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF];
 static gnrc_sixlowpan_nd_router_prf_t _prefixes[GNRC_SIXLOWPAN_ND_ROUTER_ABR_PRF_NUMOF];
 
-static void _init_abr(const ipv6_addr_t *addr,
-                      gnrc_sixlowpan_nd_router_abr_t *abr)
-{
-    DEBUG("6lo nd router: init new ABRO\n");
-    abr->addr.u64[0] = addr->u64[0];
-    abr->addr.u64[1] = addr->u64[1];
-    abr->ltime = 0;
-    abr->version = 0;
-    abr->prfs = NULL;
-    memset(abr->ctxs, 0, sizeof(abr->ctxs));
-}
-
 static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
 {
     DEBUG("6lo nd router: get ABRO for  %s.\n",
@@ -54,7 +42,13 @@ static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
         }
         else if (ipv6_addr_is_unspecified(&_abrs[i].addr)) {
             /* unused abr found, fresh init */
-            _init_abr(addr, &_abrs[i]);
+            DEBUG(" -- init new ABRO entry\n");
+            abr->addr.u64[0] = addr->u64[0];
+            abr->addr.u64[1] = addr->u64[1];
+            abr->ltime = 0;
+            abr->version = 0;
+            abr->prfs = NULL;
+            memset(abr->ctxs, 0, sizeof(abr->ctxs));
             return &_abrs[i];
         }
     }
@@ -77,6 +71,7 @@ static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(gnrc_ipv6_netif_t *ipv6_iface
 
         if (ipv6_addr_is_unspecified(&_prefixes[i].prefix->addr)) {
             /* init prefix */
+            DEBUG(" -- init new ABRO prefix\n");
             _prefixes[i].iface = ipv6_iface;
             _prefixes[i].prefix = prefix;
             return &_prefixes[i];
@@ -92,7 +87,10 @@ static void _abr_add_prefix(kernel_pid_t iface,
 {
     gnrc_ipv6_netif_t *ipv6_iface = gnrc_ipv6_netif_get(iface);
     ipv6_addr_t *prefix;
-
+    DEBUG("6lo nd router: add prefix to ABRO\n");
+    DEBUG(" -- ABRO %s\n", ipv6_addr_to_str(addr_str, &(abr->addr), sizeof(addr_str)));
+    DEBUG(" -- prefix %s\n", ipv6_addr_to_str(addr_str, &(pi_opt->prefix.addr), sizeof(addr_str)));
+    /* check PIO */
     if ((pi_opt->len != NDP_OPT_PI_LEN) ||
         ipv6_addr_is_link_local(&pi_opt->prefix) ||
         (pi_opt->flags & NDP_OPT_PI_FLAGS_A) ||
@@ -100,11 +98,12 @@ static void _abr_add_prefix(kernel_pid_t iface,
         (pi_opt->valid_ltime.u32 == 0)) {
         return;
     }
-
+    /* find prefix storage */
     if((prefix = gnrc_ipv6_netif_match_prefix(iface, &pi_opt->prefix)) != NULL) {
         gnrc_sixlowpan_nd_router_prf_t *prf_ent;
         prf_ent = _get_prefix(ipv6_iface, container_of(prefix, gnrc_ipv6_netif_addr_t, addr));
         if (prf_ent != NULL) {
+            DEBUG(" -- SUCCESS\n");
             LL_PREPEND(abr->prfs, prf_ent);
         }
     }
@@ -112,11 +111,14 @@ static void _abr_add_prefix(kernel_pid_t iface,
 
 static void _abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, sixlowpan_nd_opt_6ctx_t *ctx_opt)
 {
+    DEBUG("6lo nd router: add CTX to ABRO\n");
+    DEBUG(" -- ABRO %s\n", ipv6_addr_to_str(addr_str, &(abr->addr), sizeof(addr_str)));
     if (((ctx_opt->ctx_len < 64) && (ctx_opt->len != 2)) ||
         ((ctx_opt->ctx_len >= 64) && (ctx_opt->len != 3))) {
         return;
     }
     bf_set(abr->ctxs, sixlowpan_nd_opt_6ctx_get_cid(ctx_opt));
+    DEBUG(" -- SUCCESS\n");
 }
 
 #ifdef MODULE_GNRC_SIXLOWPAN_ND_BORDER_ROUTER
