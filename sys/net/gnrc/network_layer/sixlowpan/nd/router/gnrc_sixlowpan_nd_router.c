@@ -32,7 +32,8 @@ static char addr_str[IPV6_ADDR_MAX_STR_LEN];
 static gnrc_sixlowpan_nd_router_abr_t _abrs[GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF];
 static gnrc_sixlowpan_nd_router_prf_t _prefixes[GNRC_SIXLOWPAN_ND_ROUTER_ABR_PRF_NUMOF];
 
-static void _init_abr(const ipv6_addr_t *addr, gnrc_sixlowpan_nd_router_abr_t *abr)
+static void _init_abr(const ipv6_addr_t *addr,
+                      gnrc_sixlowpan_nd_router_abr_t *abr)
 {
     DEBUG("6lo nd router: init new ABRO\n");
     abr->addr.u64[0] = addr->u64[0];
@@ -60,55 +61,56 @@ static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
     return NULL;
 }
 
-static gnrc_sixlowpan_nd_router_prf_t *_get_free_prefix(gnrc_ipv6_netif_t *ipv6_iface,
-                                                        ipv6_addr_t *prefix,
-                                                        size_t prefix_len)
+static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(gnrc_ipv6_netif_t *ipv6_iface,
+                                                   gnrc_ipv6_netif_addr_t *prefix)
 {
-    gnrc_sixlowpan_nd_router_prf_t *prf = NULL;
+    DEBUG("6lo nd router: get prefix for  %s.\n",
+          ipv6_addr_to_str(addr_str, &(prefix->addr), sizeof(addr_str)));
 
     for (int i = 0; i < GNRC_SIXLOWPAN_ND_ROUTER_ABR_PRF_NUMOF; i++) {
-        if ((ipv6_addr_match_prefix(&_prefixes[i].prefix->addr, prefix) >= prefix_len) &&
-            (_prefixes[i].prefix->prefix_len == prefix_len) &&
+        if ((ipv6_addr_match_prefix(&(_prefixes[i].prefix->addr),
+                                    &(prefix->addr)) >= prefix->prefix_len) &&
+            (_prefixes[i].prefix->prefix_len == prefix->prefix_len) &&
             (_prefixes[i].iface == ipv6_iface)) {
             return &_prefixes[i];
         }
 
-        if ((prf == NULL) &&
-            ((_prefixes[i].prefix == NULL) ||
-             ipv6_addr_is_unspecified(&_prefixes[i].prefix->addr))) {
-            prf = &_prefixes[i];
+        if (ipv6_addr_is_unspecified(&_prefixes[i].prefix->addr)) {
+            /* init prefix */
+            _prefixes[i].iface = ipv6_iface;
+            _prefixes[i].prefix = prefix;
+            return &_prefixes[i];
         }
     }
 
-    return prf;
+    return NULL;
 }
 
-static void _add_prefix(kernel_pid_t iface, gnrc_sixlowpan_nd_router_abr_t *abr,
-                        ndp_opt_pi_t *pi_opt)
+static void _abr_add_prefix(kernel_pid_t iface,
+                            gnrc_sixlowpan_nd_router_abr_t *abr,
+                            ndp_opt_pi_t *pi_opt)
 {
-    gnrc_sixlowpan_nd_router_prf_t *prf_ent;
     gnrc_ipv6_netif_t *ipv6_iface = gnrc_ipv6_netif_get(iface);
     ipv6_addr_t *prefix;
 
-    if ((pi_opt->len != NDP_OPT_PI_LEN) || ipv6_addr_is_link_local(&pi_opt->prefix) ||
+    if ((pi_opt->len != NDP_OPT_PI_LEN) ||
+        ipv6_addr_is_link_local(&pi_opt->prefix) ||
         (pi_opt->flags & NDP_OPT_PI_FLAGS_A) ||
         (pi_opt->flags & NDP_OPT_PI_FLAGS_L) ||
         (pi_opt->valid_ltime.u32 == 0)) {
         return;
     }
 
-    prefix = gnrc_ipv6_netif_match_prefix(iface, &pi_opt->prefix);
-
-    prf_ent = _get_free_prefix(ipv6_iface, &pi_opt->prefix, pi_opt->prefix_len);
-
-    if ((prf_ent != NULL) && (prf_ent->iface == NULL)) {
-        prf_ent->iface = ipv6_iface;
-        prf_ent->prefix = container_of(prefix, gnrc_ipv6_netif_addr_t, addr);
-        LL_PREPEND(abr->prfs, prf_ent);
+    if((prefix = gnrc_ipv6_netif_match_prefix(iface, &pi_opt->prefix)) != NULL) {
+        gnrc_sixlowpan_nd_router_prf_t *prf_ent;
+        prf_ent = _get_prefix(ipv6_iface, container_of(prefix, gnrc_ipv6_netif_addr_t, addr));
+        if (prf_ent != NULL) {
+            LL_PREPEND(abr->prfs, prf_ent);
+        }
     }
 }
 
-static void _add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, sixlowpan_nd_opt_6ctx_t *ctx_opt)
+static void _abr_add_ctx(gnrc_sixlowpan_nd_router_abr_t *abr, sixlowpan_nd_opt_6ctx_t *ctx_opt)
 {
     if (((ctx_opt->ctx_len < 64) && (ctx_opt->len != 2)) ||
         ((ctx_opt->ctx_len >= 64) && (ctx_opt->len != 3))) {
@@ -186,7 +188,7 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
     gnrc_sixlowpan_nd_router_abr_t *abr;
     uint32_t t = 0;
     uint32_t version;
-
+    /* check wether this node is the 6Lo ABR */
     if (_is_me(&abr_opt->braddr)) {
         DEBUG("6lo nd router, opt_abr_handle: its me.\n");
         return;
@@ -219,10 +221,10 @@ void gnrc_sixlowpan_nd_opt_abr_handle(kernel_pid_t iface, ndp_rtr_adv_t *rtr_adv
 
         switch (opt->type) {
             case NDP_OPT_PI:
-                _add_prefix(iface, abr, (ndp_opt_pi_t *)opt);
+                _abr_add_prefix(iface, abr, (ndp_opt_pi_t *)opt);
 
             case NDP_OPT_6CTX:
-                _add_ctx(abr, (sixlowpan_nd_opt_6ctx_t *)opt);
+                _abr_add_ctx(abr, (sixlowpan_nd_opt_6ctx_t *)opt);
 
             default:
                 break;
@@ -307,16 +309,14 @@ int gnrc_sixlowpan_nd_router_abr_add_prf(gnrc_sixlowpan_nd_router_abr_t* abr,
     if ((abr < _abrs) || (abr > (_abrs + GNRC_SIXLOWPAN_ND_ROUTER_ABR_NUMOF))) {
         return -ENOENT;
     }
-    prf_ent = _get_free_prefix(iface, &prefix->addr, prefix->prefix_len);
+    prf_ent = _get_prefix(iface, prefix);
     if (prf_ent == NULL) {
         return -ENOMEM;
     }
-    if (prf_ent->iface == NULL) {
-        prf_ent->iface = iface;
-        prf_ent->prefix = prefix;
-        LL_PREPEND(abr->prfs, prf_ent);
-        abr->version++; /* TODO: store somewhere stable */
-    }
+    /* add prefix to abr */
+    LL_PREPEND(abr->prfs, prf_ent);
+    abr->version++; /* TODO: store somewhere stable */
+
     return 0;
 }
 
