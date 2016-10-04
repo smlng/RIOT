@@ -43,20 +43,20 @@ static gnrc_sixlowpan_nd_router_abr_t *_get_abr(const ipv6_addr_t *addr)
         else if (ipv6_addr_is_unspecified(&_abrs[i].addr)) {
             /* unused abr found, fresh init */
             DEBUG(" -- init new ABRO entry\n");
-            abr->addr.u64[0] = addr->u64[0];
-            abr->addr.u64[1] = addr->u64[1];
-            abr->ltime = 0;
-            abr->version = 0;
-            abr->prfs = NULL;
-            memset(abr->ctxs, 0, sizeof(abr->ctxs));
+            _abrs[i].addr.u64[0] = addr->u64[0];
+            _abrs[i].addr.u64[1] = addr->u64[1];
+            _abrs[i].ltime = 0;
+            _abrs[i].version = 0;
+            _abrs[i].prfs = NULL;
+            memset(&_abrs[i].ctxs, 0, sizeof(&_abrs[i].ctxs));
             return &_abrs[i];
         }
     }
     return NULL;
 }
 
-static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(const gnrc_ipv6_netif_t *ipv6_iface,
-                                                   const gnrc_ipv6_netif_addr_t *prefix)
+static gnrc_sixlowpan_nd_router_prf_t *_get_prefix(gnrc_ipv6_netif_t *ipv6_iface,
+                                                   gnrc_ipv6_netif_addr_t *prefix)
 {
     DEBUG("6lo nd router: get prefix for  %s.\n",
           ipv6_addr_to_str(addr_str, &(prefix->addr), sizeof(addr_str)));
@@ -89,7 +89,7 @@ static void _abr_add_prefix(const kernel_pid_t iface,
     ipv6_addr_t *prefix;
     DEBUG("6lo nd router: add prefix to ABRO\n");
     DEBUG(" -- ABRO %s\n", ipv6_addr_to_str(addr_str, &(abr->addr), sizeof(addr_str)));
-    DEBUG(" -- prefix %s\n", ipv6_addr_to_str(addr_str, &(pi_opt->prefix.addr), sizeof(addr_str)));
+    DEBUG(" -- prefix %s\n", ipv6_addr_to_str(addr_str, &(pi_opt->prefix), sizeof(addr_str)));
     /* check PIO */
     if ((pi_opt->len != NDP_OPT_PI_LEN) ||
         ipv6_addr_is_link_local(&pi_opt->prefix) ||
