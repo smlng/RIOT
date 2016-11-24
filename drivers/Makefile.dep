@@ -238,6 +238,14 @@ ifneq (,$(filter mpl3115a2,$(USEMODULE)))
   FEATURES_REQUIRED += periph_i2c
 endif
 
+ifneq (,$(filter ltc4150,$(USEMODULE)))
+    USEMODULE += xtimer
+endif
+
+ifneq (,$(filter mcp2515,$(USEMODULE)))
+  USEMODULE += xtimer
+endif
+
 ifneq (,$(filter mpu9150,$(USEMODULE)))
   FEATURES_REQUIRED += periph_i2c
   USEMODULE += xtimer

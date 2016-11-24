@@ -253,3 +253,6 @@ endif
 ifneq (,$(filter xbee,$(USEMODULE)))
   USEMODULE_INCLUDES += $(RIOTBASE)/drivers/xbee/include
 endif
+ifneq (,$(filter mcp2515,$(USEMODULE)))
+    USEMODULE_INCLUDES += $(RIOTBASE)/drivers/mcp2515/include
+endif
