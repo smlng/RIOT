@@ -7,7 +7,7 @@
  */
 
 /**
- * @ingroup
+ * @ingroup     drivers_kw2xrf
  * @{
  *
  * @file

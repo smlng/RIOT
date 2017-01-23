@@ -57,6 +57,8 @@ extern "C" {
 
 /**
  * @brief   Default channel used after initialization
+ *
+ * @{
  */
 #ifdef DEFAULT_CHANNEL
 #define KW2XRF_DEFAULT_CHANNEL (DEFAULT_CHANNEL)
@@ -64,8 +66,16 @@ extern "C" {
 #ifndef KW2XRF_DEFAULT_CHANNEL
 #define KW2XRF_DEFAULT_CHANNEL        (IEEE802154_DEFAULT_CHANNEL)
 #endif
+/** @} */
+
+/**
+ * @brief   Allowed range of channels
+ *
+ * @{
+ */
 #define KW2XRF_MIN_CHANNEL              (11U)
 #define KW2XRF_MAX_CHANNEL              (26U)
+/** @} */
 
 /**
  * @brief   Default TX_POWER in dbm used after initialization
@@ -167,7 +177,6 @@ int kw2xrf_init(kw2xrf_t *dev, gpio_cb_t cb);
  * @param[in] dev           device to reset
  */
 void kw2xrf_reset_phy(kw2xrf_t *dev);
-
 
 #ifdef __cplusplus
 }
