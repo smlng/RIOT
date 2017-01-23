@@ -16,6 +16,9 @@
  * @author      Johann Fischer <j.fischer@phytec.de>
  */
 
+#ifndef KW2XRF_INTERN_H
+#define KW2XRF_INTERN_H
+
 #include <stdint.h>
 #include "kw2xrf.h"
 
@@ -229,4 +232,6 @@ uint32_t kw2xrf_get_timestamp(kw2xrf_t *dev);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* KW2XRF_INTERN_H */
 /** @} */

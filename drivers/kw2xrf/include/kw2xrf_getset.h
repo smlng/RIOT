@@ -16,6 +16,9 @@
  * @author      Johann Fischer <j.fischer@phytec.de>
  */
 
+#ifndef KW2XRF_GETSET_H
+#define KW2XRF_GETSET_H
+
 #include "kw2xrf.h"
 
 #ifdef __cplusplus
@@ -196,4 +199,6 @@ void kw2xrf_set_option(kw2xrf_t *dev, uint16_t option, bool state);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* KW2XRF_GETSET_H */
 /** @} */
