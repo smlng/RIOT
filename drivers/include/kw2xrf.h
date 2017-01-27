@@ -125,7 +125,7 @@ extern "C" {
  */
 typedef struct kw2xrf_params {
     spi_t spi;                          /**< SPI bus the device is connected to */
-    spi_speed_t spi_speed;              /**< SPI speed to use */
+    spi_clk_t spi_clk;                  /**< SPI clock speed to use */
     gpio_t cs_pin;                      /**< GPIO pin connected to chip select */
     gpio_t int_pin;                     /**< GPIO pin connected to the interrupt pin */
 } kw2xrf_params_t;
