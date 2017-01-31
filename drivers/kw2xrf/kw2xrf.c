@@ -15,6 +15,7 @@
  * @author      Johann Fischer <j.fischer@phytec.de>
  * @author      Jonas Remmert <j.remmert@phytec.de>
  * @author      Oliver Hahm <oliver.hahm@inria.fr>
+ * @author      Sebastian Meiling <s@mlng.net>
  * @}
  */
 #include <stdint.h>
@@ -26,6 +27,7 @@
 #include "periph/cpuid.h"
 #include "net/gnrc.h"
 #include "net/ieee802154.h"
+#include "uuid.h"
 
 #include "kw2xrf.h"
 #include "kw2xrf_spi.h"
@@ -37,50 +39,18 @@
 #define ENABLE_DEBUG    (0)
 #include "debug.h"
 
-#if CPUID_LEN
-/* make sure that the buffer is always big enough to store a 64bit value */
-#if CPUID_LEN < IEEE802154_LONG_ADDRESS_LEN
-#define KW2XRF_ID_LEN   IEEE802154_LONG_ADDRESS_LEN
-#else
-#define KW2XRF_ID_LEN   CPUID_LEN
-#endif
-#endif
-
 static void kw2xrf_set_address(kw2xrf_t *dev)
 {
+    DEBUG("[kw2xrf]: kw2xrf_set_address\n");
     eui64_t addr_long;
-    addr_long.uint64.u64 = KW2XRF_DEFAULT_ADDR_LONG;
-    uint16_t addr_short = KW2XRF_DEFAULT_SHORT_ADDR;
-
-#if CPUID_LEN
-    if (CPUID_LEN) {
-        uint8_t cpuid[KW2XRF_ID_LEN];
-        /* in case CPUID_LEN < 8, fill missing bytes with zeros */
-        memset(cpuid, 0, CPUID_LEN);
-
-        cpuid_get(cpuid);
-
-        /* generate short hardware address if CPUID_LEN > 0 */
-        for (int i = 0; i < CPUID_LEN; i++) {
-            /* XOR each even byte of the CPUID with LSB of short address
-               and each odd byte with MSB */
-            addr_short ^= (uint16_t)(cpuid[i] << ((i & 0x01) * 8));
-        }
-
-        for (int i = IEEE802154_LONG_ADDRESS_LEN; i < CPUID_LEN; i++) {
-            cpuid[i & 0x07] ^= cpuid[i];
-        }
-
-        /* make sure we mark the address as non-multicast and not globally unique */
-        cpuid[0] &= ~(0x01);
-        cpuid[0] |= 0x02;
-        /* copy and set long address */
-        memcpy(&addr_long, cpuid, IEEE802154_LONG_ADDRESS_LEN);
-    }
-#endif
-
-    kw2xrf_set_addr_long(dev, addr_long.uint64.u64);
-    kw2xrf_set_addr_short(dev, addr_short);
+    /* get an 8-byte unique ID to use as hardware address */
+    uuid_get(addr_long.uint8, IEEE802154_LONG_ADDRESS_LEN);
+    /* make sure we mark the address as non-multicast and not globally unique */
+    addr_long.uint8[0] &= ~(0x01);
+    addr_long.uint8[0] |=  (0x02);
+    /* set short and long address */
+    kw2xrf_set_addr_long(dev, NTOHLL(addr_long.uint64.u64));
+    kw2xrf_set_addr_short(dev, NTOHS(addr_long.uint16[0].u16));
 }
 
 void kw2xrf_setup(kw2xrf_t *dev, const kw2xrf_params_t *params)
