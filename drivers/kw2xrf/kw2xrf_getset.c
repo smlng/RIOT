@@ -71,15 +71,15 @@ static const uint8_t pow_lt[44] = {
 
 void kw2xrf_set_tx_power(kw2xrf_t *dev, int16_t txpower)
 {
-    if (txpower > MKW2XDRF_OUTPUT_POWER_MAX) {
-        txpower = MKW2XDRF_OUTPUT_POWER_MAX;
+    if (txpower > KW2XDRF_OUTPUT_POWER_MAX) {
+        txpower = KW2XDRF_OUTPUT_POWER_MAX;
     }
 
-    if (txpower < MKW2XDRF_OUTPUT_POWER_MIN) {
-        txpower = MKW2XDRF_OUTPUT_POWER_MIN;
+    if (txpower < KW2XDRF_OUTPUT_POWER_MIN) {
+        txpower = KW2XDRF_OUTPUT_POWER_MIN;
     }
 
-    uint8_t level = pow_lt[txpower - MKW2XDRF_OUTPUT_POWER_MIN];
+    uint8_t level = pow_lt[txpower - KW2XDRF_OUTPUT_POWER_MIN];
     kw2xrf_write_dreg(dev, MKW2XDM_PA_PWR, MKW2XDM_PA_PWR(level));
     dev->tx_power = txpower;
 }
