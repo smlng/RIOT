@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "log.h"
 #include "mutex.h"
 #include "msg.h"
 #include "periph/gpio.h"
@@ -41,7 +42,7 @@
 
 static void kw2xrf_set_address(kw2xrf_t *dev)
 {
-    DEBUG("[kw2xrf]: kw2xrf_set_address\n");
+    DEBUG("[kw2xrf] set MAC addresses\n");
     eui64_t addr_long;
     /* get an 8-byte unique ID to use as hardware address */
     uuid_get(addr_long.uint8, IEEE802154_LONG_ADDRESS_LEN);
@@ -55,7 +56,6 @@ static void kw2xrf_set_address(kw2xrf_t *dev)
 
 void kw2xrf_setup(kw2xrf_t *dev, const kw2xrf_params_t *params)
 {
-    DEBUG("[kw2xrf]: kw2xrf_setup\n");
     netdev2_t *netdev = (netdev2_t *)dev;
 
     netdev->driver = &kw2xrf_driver;
@@ -66,7 +66,7 @@ void kw2xrf_setup(kw2xrf_t *dev, const kw2xrf_params_t *params)
     dev->pending_tx = 0;
     kw2xrf_spi_init(dev);
     kw2xrf_set_power_mode(dev, KW2XRF_IDLE);
-    DEBUG("[kw2xrf]: setup finished\n");
+    DEBUG("[kw2xrf] setup finished\n");
 }
 
 int kw2xrf_init(kw2xrf_t *dev, gpio_cb_t cb)
@@ -83,7 +83,7 @@ int kw2xrf_init(kw2xrf_t *dev, gpio_cb_t cb)
     kw2xrf_abort_sequence(dev);
     kw2xrf_update_overwrites(dev);
     kw2xrf_timer_init(dev, KW2XRF_TIMEBASE_62500HZ);
-    DEBUG("[kw2xrf]: init finished\n");
+    DEBUG("[kw2xrf] init finished\n");
 
     return 0;
 }
@@ -127,6 +127,6 @@ void kw2xrf_reset_phy(kw2xrf_t *dev)
 
     kw2xrf_enable_irq_b(dev);
 
-    DEBUG("[kw2xrf]: Initialized and set to channel %d and pan %d.\n",
+    DEBUG("[kw2xrf] init phy and (re)set to channel %d and pan %d.\n",
           KW2XRF_DEFAULT_CHANNEL, KW2XRF_DEFAULT_PANID);
 }
