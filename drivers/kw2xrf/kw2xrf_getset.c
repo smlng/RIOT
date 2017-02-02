@@ -32,8 +32,10 @@
 #define KW2XRF_LQI_HW_MAX           230      /**< LQI Saturation Level */
 
 /* Modem_PA_PWR Register (PA Power Control) has a valid range from 3-31 */
-#define MKW2XDRF_PA_RANGE_MAX      31       /**< Maximum value of PA Power Control Register */
-#define MKW2XDRF_PA_RANGE_MIN      3        /**< Minimum value of PA Power Control Register */
+#define KW2XRF_PA_RANGE_MAX      31       /**< Maximum value of PA Power Control Register */
+#define KW2XRF_PA_RANGE_MIN      3        /**< Minimum value of PA Power Control Register */
+
+#define KW2XRF_NUM_CHANNEL      (KW2XRF_MAX_CHANNEL - KW2XRF_MIN_CHANNEL + 1)
 
 /* PLL integer and fractional lookup tables
  *
@@ -98,7 +100,7 @@ uint8_t kw2xrf_get_channel(kw2xrf_t *dev)
     uint16_t pll_frac = kw2xrf_read_dreg(dev, MKW2XDM_PLL_FRAC0_LSB);
     pll_frac |= ((uint16_t)kw2xrf_read_dreg(dev, MKW2XDM_PLL_FRAC0_MSB) << 8);
 
-    for (int i = 0; i < 16; i++) {
+    for (unsigned i = 0; i < KW2XRF_NUM_CHANNEL; i++) {
         if ((pll_frac_lt[i] == pll_frac) && (pll_int_lt[i] == pll_int)) {
             return i + 11;
         }
@@ -284,7 +286,7 @@ void kw2xrf_set_addr_long(kw2xrf_t *dev, uint64_t addr)
     uint64_t tmp;
     uint8_t *ap = (uint8_t *)(&tmp);
 
-    for (int i = 0; i < IEEE802154_LONG_ADDRESS_LEN; i++) {
+    for (unsigned i = 0; i < IEEE802154_LONG_ADDRESS_LEN; i++) {
         dev->netdev.long_addr[i] = (uint8_t)(addr >> (i * 8));
         ap[i] = (addr >> ((IEEE802154_LONG_ADDRESS_LEN - 1 - i) * 8));
     }

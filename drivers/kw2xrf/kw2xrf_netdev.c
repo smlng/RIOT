@@ -74,7 +74,7 @@ static int _init(netdev2_t *netdev)
 
 static size_t kw2xrf_tx_load(uint8_t *pkt_buf, uint8_t *buf, size_t len, size_t offset)
 {
-    for (int i = 0; i < len; i++) {
+    for (unsigned i = 0; i < len; i++) {
         pkt_buf[i + offset] = buf[i];
     }
     return offset + len;
