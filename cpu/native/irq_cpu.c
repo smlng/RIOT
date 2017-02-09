@@ -343,6 +343,9 @@ void native_isr_entry(int sig, siginfo_t *info, void *context)
 #elif defined(__FreeBSD__)
     _native_saved_eip = ((struct sigcontext *)context)->sc_eip;
     ((struct sigcontext *)context)->sc_eip = (unsigned int)&_native_sig_leave_tramp;
+#elif defined(__powerpc__) || defined(__powerpc64__)
+    _native_saved_eip = ((ucontext_t *)context)->uc_mcontext.regs->nip;
+    ((ucontext_t *)context)->uc_mcontext.regs->nip = (unsigned int)&_native_sig_leave_tramp;
 #else /* Linux */
 #if defined(__arm__)
     _native_saved_eip = ((ucontext_t *)context)->uc_mcontext.arm_pc;

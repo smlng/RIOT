@@ -76,6 +76,9 @@ static void _native_mod_ctx_leave_sigh(ucontext_t *ctx)
 #elif defined(__FreeBSD__)
     _native_saved_eip = ((struct sigcontext *)ctx)->sc_eip;
     ((struct sigcontext *)ctx)->sc_eip = (unsigned int)&_native_sig_leave_handler;
+#elif defined(__powerpc__) || defined(__powerpc64__)
+    _native_saved_eip = ctx->uc_mcontext.regs->nip;
+    ctx->uc_mcontext.regs->nip = (unsigned int)&_native_sig_leave_handler;
 #else /* Linux */
 #if defined(__arm__)
     _native_saved_eip = ((ucontext_t *)ctx)->uc_mcontext.arm_pc;
