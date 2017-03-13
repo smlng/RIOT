@@ -20,7 +20,6 @@
  * @}
  */
 
-#include <stdio.h>
 #include <stdint.h>
 
 #include "xtimer.h"
@@ -36,7 +35,7 @@ int main(void)
     uint64_t diff_max = 0;
     uint64_t diff_sum = 0;
     xtimer_ticks64_t before = xtimer_now64();
-    puts("[START]");
+    print_str("[START]\n");
     while(--n) {
         xtimer_ticks64_t now = xtimer_now64();
         xtimer_ticks64_t diff = xtimer_diff64(now, before);
@@ -49,17 +48,17 @@ int main(void)
         diff_sum += diff.ticks64;
         before = now;
     }
-    printf("[RESULTS] min=");
+    print_str("[RESULTS] min=");
     print_u64_dec(diff_min);
-    printf(", avg=");
+    print_str(", avg=");
     print_u64_dec(diff_sum/ITERATIONS);
-    printf(", max=");
+    print_str(", max=");
     print_u64_dec(diff_max);
-    puts("");
+    print_str("\n");
     if ((diff_max > MAXDIFF) || (diff_sum/ITERATIONS > MAXDIFF)) {
-        puts("[FAILURE]");
+        print_str("[FAILURE]\n");
         return 1;
     }
-    puts("[SUCCESS]");
+    print_str("[SUCCESS]\n");
     return 0;
 }
