@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include "xtimer.h"
+#include "fmt.h"
 
 #define ITERATIONS  (100000LU)
 #define MAXDIFF     (1000U)
@@ -48,8 +49,13 @@ int main(void)
         diff_sum += diff.ticks64;
         before = now;
     }
-    printf("[RESULTS] min=%"PRIu64", avg=%"PRIu64", max=%"PRIu64"\n",
-           diff_min, diff_sum/ITERATIONS, diff_max);
+    printf("[RESULTS] min=");
+    print_u64_dec(diff_min);
+    printf(", avg=");
+    print_u64_dec(diff_sum/ITERATIONS);
+    printf(", max=");
+    print_u64_dec(diff_max);
+    puts("");
     if ((diff_max > MAXDIFF) || (diff_sum/ITERATIONS > MAXDIFF)) {
         puts("[FAILURE]");
         return 1;
