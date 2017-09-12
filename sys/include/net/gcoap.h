@@ -331,6 +331,7 @@ extern "C" {
  */
 #define GCOAP_MSG_TYPE_INTR     (0x1502)
 
+#define GCOAP_THREAD_PRIORITY   (6U)
 /**
  * @brief   Maximum number of Observe clients; use 2 if not defined
  */

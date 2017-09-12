@@ -50,7 +50,7 @@ extern "C" {
  * @brief   Default priority for adaption layer's threads
  */
 #ifndef GNRC_NETDEV_MAC_PRIO
-#define GNRC_NETDEV_MAC_PRIO    (THREAD_PRIORITY_MAIN - 5)
+#define GNRC_NETDEV_MAC_PRIO    (2U)
 #endif
 
 /**

@@ -578,7 +578,7 @@ kernel_pid_t gcoap_init(void)
     if (_pid != KERNEL_PID_UNDEF) {
         return -EEXIST;
     }
-    _pid = thread_create(_msg_stack, sizeof(_msg_stack), THREAD_PRIORITY_MAIN - 1,
+    _pid = thread_create(_msg_stack, sizeof(_msg_stack), GCOAP_THREAD_PRIORITY,
                             THREAD_CREATE_STACKTEST, _event_loop, NULL, "coap");
 
     mutex_init(&_coap_state.lock);

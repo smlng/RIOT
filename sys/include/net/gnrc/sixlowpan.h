@@ -123,7 +123,7 @@ extern "C" {
  * @brief   Default priority for the 6LoWPAN thread.
  */
 #ifndef GNRC_SIXLOWPAN_PRIO
-#define GNRC_SIXLOWPAN_PRIO             (THREAD_PRIORITY_MAIN - 4)
+#define GNRC_SIXLOWPAN_PRIO             (3U)
 #endif
 
 /**

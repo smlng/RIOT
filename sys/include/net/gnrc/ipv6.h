@@ -58,7 +58,7 @@ extern "C" {
  * @brief   Default priority for the IPv6 thread
  */
 #ifndef GNRC_IPV6_PRIO
-#define GNRC_IPV6_PRIO              (THREAD_PRIORITY_MAIN - 3)
+#define GNRC_IPV6_PRIO              (4U)
 #endif
 
 /**
