@@ -8,12 +8,8 @@
  */
 
 /**
-<<<<<<< HEAD
  * @defgroup    boards_remote-revb RE-Mote Revision B
  * @ingroup     boards
-=======
- * @ingroup     boards_remote
->>>>>>> testing remote-revb
  * @brief       Support for the RE-Mote board Revision B
  * @{
  *
@@ -21,7 +17,6 @@
  * @brief       Board specific definitions for the RE-Mote board Revision B
  *
  * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
-<<<<<<< HEAD
  * @author      Antonio Lignan <alinan@zolertia.com>
  * @author      Sebastian Meiling <s@mlng.net>
  */
@@ -30,17 +25,6 @@
 #define BOARD_H
 
 #include "cpu.h"
-=======
- *              Antonio Lignan <alinan@zolertia.com>
- */
-
-#ifndef BOARD_H_
-#define BOARD_H_
-
-#include "cpu.h"
-#include "periph/gpio.h"
-#include "periph/spi.h"
->>>>>>> testing remote-revb
 #include "board_common.h"
 
 #ifdef __cplusplus
@@ -51,15 +35,9 @@
  * @name LED pin definitions
  * @{
  */
-<<<<<<< HEAD
 #define LED0_PIN        GPIO_PIN(3, 4)
 #define LED1_PIN        GPIO_PIN(1, 7)
 #define LED2_PIN        GPIO_PIN(1, 6)
-=======
-#define LED0_PIN        GPIO_PD4
-#define LED1_PIN        GPIO_PB7
-#define LED2_PIN        GPIO_PB6
->>>>>>> testing remote-revb
 
 #define LED0_MASK       (1 << 4)
 #define LED1_MASK       (1 << 7)
@@ -79,7 +57,6 @@
 /** @} */
 
 /**
-<<<<<<< HEAD
  * @name User button pin definition
  * @{
  */
@@ -88,8 +65,6 @@
 /** @} */
 
 /**
-=======
->>>>>>> testing remote-revb
  * @name  RF switch controlled by SW
  * @brief Controls which RF interface goes to the RP-SMA external antenna
  *
@@ -136,7 +111,6 @@
 #define CC1200_GPD2_GPIO    GPIO_PB0
 /** @} */
 
-<<<<<<< HEAD
 /**
  * @name Onboard micro-sd slot pin definitions
  * @{
@@ -158,11 +132,6 @@ void board_init(void);
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
+
 #endif /* BOARD_H */
-=======
-#ifdef __cplusplus
-} /* end extern "C" */
-#endif
-#endif /* BOARD_H_ */
->>>>>>> testing remote-revb
 /** @} */

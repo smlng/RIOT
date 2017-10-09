@@ -73,8 +73,6 @@
 #define CCA_BACKDOOR_ACTIVE_LEVEL (0) /**< Active low */
 /** @} */
 
-#define BUTTON_GPIO         GPIO_PA3
-
 /**
  * @name xtimer configuration
  * @{
