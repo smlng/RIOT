@@ -72,7 +72,7 @@ static const umorse_out_t print = {
     .params = NULL
 };
 
-static const char text[] = "Hello RIOT-OS!\nThis is uMorse.";
+static const char text[] = "Hello World!\nThis is RIOT!";
 
 int test_umorse_out(void)
 {
@@ -82,17 +82,9 @@ int test_umorse_out(void)
            (unsigned)strlen(text), text);
 
     memset(code, 0, CODE_LEN);
-    printf("> using aligned encoding:\n");
-    int ret = umorse_encode_aligned(text, sizeof(text), code, sizeof(code));
-    if (ret < 0) {
-        return 1;
-    }
-    umorse_output(&print, code, ret, 0x0);
-    printf("> encoded length=%d\n", ret);
-
-    memset(code, 0, CODE_LEN);
     printf("> using compact encoding:\n");
-    ret = umorse_encode_compact(text, sizeof(text), code, sizeof(code));
+    xtimer_sleep(1);
+    int ret = umorse_encode_compact(text, sizeof(text), code, sizeof(code));
     if (ret < 0) {
         return 2;
     }
