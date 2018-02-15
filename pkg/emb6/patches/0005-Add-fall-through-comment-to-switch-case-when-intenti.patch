@@ -1,0 +1,24 @@
+From 03f87af8ed1a1a52f10f5f0b6834649e0997ea12 Mon Sep 17 00:00:00 2001
+From: Martine Lenders <m.lenders@fu-berlin.de>
+Date: Thu, 15 Feb 2018 14:06:55 +0100
+Subject: [PATCH 5/5] Add fall-through comment to switch-case when intentional
+
+---
+ emb6/src/net/ipv6/uip6.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/emb6/src/net/ipv6/uip6.c b/emb6/src/net/ipv6/uip6.c
+index 281c8d9..bb4ce64 100644
+--- a/emb6/src/net/ipv6/uip6.c
++++ b/emb6/src/net/ipv6/uip6.c
+@@ -985,6 +985,7 @@ ext_hdr_options_process(void)
+             if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
+               return 1;
+             }
++            /* Falls through. */
+           case 0x80:
+             uip_icmp6_error_output(ICMP6_PARAM_PROB, ICMP6_PARAMPROB_OPTION,
+                              (uint32_t)UIP_IPH_LEN + uip_ext_len + uip_ext_opt_offset);
+-- 
+2.7.4
+
