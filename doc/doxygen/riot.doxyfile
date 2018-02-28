@@ -830,7 +830,6 @@ EXCLUDE_PATTERNS       = */board/*/tools/* \
                          */pkg/emb6/* \
                          */pkg/lwip/* \
                          */pkg/nordic_softdevice_ble/* \
-                         */pkg/openthread/* \
                          */pkg/tlsf/patch.txt \
                          */sys/include/embUnit/* \
                          */sys/random/tinymt32/* \
