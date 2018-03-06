@@ -32,7 +32,7 @@ extern "C" {
  * @{
  */
 #ifndef FS1000A_PARAM_RECV_PIN
-#define FS1000A_PARAM_RECV_PIN      GPIO_PIN(2, 14)
+#define FS1000A_PARAM_RECV_PIN      GPIO_PIN(0, 1)
 #endif
 #ifndef FS1000A_PARAM_SEND_PIN
 #define FS1000A_PARAM_SEND_PIN      GPIO_PIN(2, 15)

@@ -26,7 +26,7 @@
 #include "thread.h"
 #include "xtimer.h"
 
-#define ENABLE_DEBUG    (0)
+#define ENABLE_DEBUG    (1)
 #include "debug.h"
 
 #define RECV_QUEUE_LEN  (8U)
@@ -69,51 +69,52 @@ static void _recv_cb(void *arg)
     last = now;
 }
 
-static char devname (uint16_t num)
+static uint32_t _decode_4bits(const uint8_t *inbuf, size_t inlen)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
-    switch (num) {
-        case 1:
-            return 'A';
-        case 2:
-            return 'B';
-        case 4:
-            return 'C';
-        case 8:
-            return 'D';
-        case 16:
-            return 'E';
-        default:
-            return -1;
-    }
-}
-
-static uint16_t _decode(unsigned num)
-{
-    DEBUG("%s: enter\n", DEBUG_FUNC);
-    if (num < 48) {
-        puts("invalid data");
-    }
-
-    uint16_t data = 0;
-    unsigned shift = 0;
-    for (unsigned i = num - 48; i < num; i = i + 4) {
-        uint8_t bit = 0;
-        for (unsigned j=0; j < 4; ++j) {
-            bit = bit | (((timings[i+j] < 500) ? 0 : 1) << j);
-        }
-        if (bit == 0x5) {
-            data |= 1 << shift;
-        }
-        else if (bit == 0x3) {
-            data |= 0 << shift;
+    DEBUG("%s: enter (inlen=%d)\n", DEBUG_FUNC, (int)inlen);
+    uint32_t data = 0;
+    for (size_t i = 0; i < (inlen * 2); ++i) {
+        uint8_t val = 0;
+        if (i % 2) {
+            val = (inbuf[(i / 2)] >> 4) & 0x0F;
         }
         else {
-            return 1;
+            val = inbuf[(i / 2)] & 0x0F;
         }
-        shift++;
+        if (val == 0x5) {
+            val = 0;
+        }
+        else if (val == 0x3) {
+            val = 1;
+        }
+        else {
+            return 0;
+        }
+        data |= (uint32_t)val << i;
     }
+    DEBUG("data=0x%"PRIx32"\n", data);
     return data;
+}
+
+static int _decode_plain(uint32_t threshhold,
+                         const uint32_t *inbuf, size_t inlen,
+                         uint8_t *outbuf, size_t outlen)
+{
+    DEBUG("%s: enter\n", DEBUG_FUNC);
+    int pos = -1;
+    /* align input on 4 bits, such that 1100 = 1 and 1010 = 0 */
+    size_t start = inlen - ((inlen / 4) * 4);
+    const uint32_t *tmp = &inbuf[start];
+    for (size_t i = 0; i < (inlen - start); ++i) {
+        bool onoff= ((tmp[i] < threshhold) ? 0 : 1);
+        DEBUG("%d", onoff);
+        if ((outbuf != NULL) && (outlen > 0)) {
+            pos = (i / 8);
+            outbuf[pos] |= (onoff << (i % 8));
+        }
+    }
+    DEBUG("\n");
+    return (pos + 1);
 }
 
 void *_receiver(void *arg)
@@ -130,15 +131,14 @@ void *_receiver(void *arg)
         msg_t m;
         msg_receive(&m);
         uint32_t diff = m.content.value;
-        rcswitch_data_t rcdata;
         if (diff > FS1000A_RECV_THRESHOLD) {
             if (abs_diff(diff, timings[0]) < 200) {
                 if (num_repeat++ > 1) {
-                    rcdata.all = _decode(num_change);
-                    char dname = devname(rcdata.bits.devnum);
-                    if ((dname >= 'A') && (dname < 'F')) {
-                        printf("%u:%c=%s\n", rcdata.bits.sysnum, dname,
-                                             (rcdata.bits.onoff & 1) ? "ON" : "OFF");
+                    uint8_t buf[32];
+                    memset(buf, 0, 32);
+                    int ret = _decode_plain(666, &timings[0], num_change, buf, 32);
+                    if (ret > 0) {
+                        _decode_4bits(buf, ret);
                     }
                     num_repeat = 0;
                 }
