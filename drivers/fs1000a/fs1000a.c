@@ -28,7 +28,7 @@
 #include "thread.h"
 #include "xtimer.h"
 
-#define ENABLE_DEBUG    (0)
+#define ENABLE_DEBUG    (1)
 #include "debug.h"
 
 #define RECV_QUEUE_LEN  (8U)
@@ -81,7 +81,6 @@ static uint32_t _decode_4bits(const uint8_t *inbuf, size_t inlen)
         uint8_t val = 0;
         if (i % 2) {
             val = (inbuf[(i / 2)] >> 4) & 0x0F;
-        }
         else {
             val = inbuf[(i / 2)] & 0x0F;
         }
@@ -193,6 +192,27 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
     }
     DEBUG("\n");
     return outpos;
+}
+
+static int _decode_plain(uint32_t threshhold,
+                         const uint32_t *inbuf, size_t inlen,
+                         uint8_t *outbuf, size_t outlen)
+{
+    DEBUG("%s: enter\n", DEBUG_FUNC);
+    int pos = -1;
+    /* align input on 4 bits, such that 1100 = 1 and 1010 = 0 */
+    size_t start = inlen - ((inlen / 4) * 4);
+    const uint32_t *tmp = &inbuf[start];
+    for (size_t i = 0; i < (inlen - start); ++i) {
+        bool onoff= ((tmp[i] < threshhold) ? 0 : 1);
+        DEBUG("%d", onoff);
+        if ((outbuf != NULL) && (outlen > 0)) {
+            pos = (i / 8);
+            outbuf[pos] |= (onoff << (i % 8));
+        }
+    }
+    DEBUG("\n");
+    return (pos + 1);
 }
 
 void *_receiver(void *arg)
