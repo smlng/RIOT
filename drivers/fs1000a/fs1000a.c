@@ -28,7 +28,7 @@
 #include "thread.h"
 #include "xtimer.h"
 
-#define ENABLE_DEBUG    (1)
+#define ENABLE_DEBUG    (0)
 #include "debug.h"
 
 #define RECV_QUEUE_LEN  (8U)
