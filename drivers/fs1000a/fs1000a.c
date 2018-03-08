@@ -37,13 +37,13 @@ static uint32_t timings[FS1000A_RECV_BUFLEN];
 static uint32_t last = 0;
 static kernel_pid_t rt = KERNEL_PID_UNDEF;
 
-static uint32_t abs_diff(uint32_t a, uint32_t b)
+static inline uint32_t abs_diff(uint32_t a, uint32_t b)
 {
-    if (a < b) {
-        return (b - a);
-    }
-    return (a - b);
+    return  (a < b) ? (b - a) : (a - b);
 }
+
+#define MAX(a,b)    ((a > b) ? a : b)
+#define MIN(a,b)    ((a < b) ? a : b)
 
 typedef union {
     uint16_t all;
@@ -204,4 +204,41 @@ int fs1000a_enable_sniffer(const fs1000a_t *dev)
 {
     DEBUG("%s: enter\n", DEBUG_FUNC);
     return _run_background_thread(dev, _sniffer);
+}
+
+#define NUM_SAMPLES (256U)
+int fs1000a_analyse_spectrum(const fs1000a_t *dev)
+{
+    msg_init_queue(recv_queue, RECV_QUEUE_LEN);
+    if (rt > KERNEL_PID_UNDEF) {
+        DEBUG("ERROR: another background thread is running!\n");
+        return (-1);
+    }
+    rt = thread_getpid();
+    if (gpio_init_int(dev->p.recv_pin, GPIO_IN, GPIO_BOTH, _recv_cb, NULL) < 0) {
+        DEBUG("%s: gpio_init_int failed!\n", DEBUG_FUNC);
+        return -2;
+    }
+    /* stats: max_now, max_all, min_now, min_all, avg_now, avg_all */
+    //uint32_t samples[NUM_SAMPLES];
+    uint32_t count, max, min, avg = 0;
+    max = avg = count = 0;
+    min = 0xffffffff;
+    while(++count) {
+        if ((count % NUM_SAMPLES) == 0) {
+            //memset(samples, 0, NUM_SAMPLES);
+            printf("%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n", count, max, avg, min);
+            max = 0;
+            avg = 0;
+            min = 0xffffffff;
+        }
+        msg_t m;
+        msg_receive(&m);
+        uint32_t val = m.content.value;
+        //samples[count] = val;
+        max = MAX(val, max);
+        min = MIN(val, min);
+        avg = (avg + val) / 2;
+    }
+    return 0;
 }
