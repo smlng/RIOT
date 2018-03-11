@@ -96,6 +96,35 @@ static uint32_t _decode_4bits(const uint8_t *inbuf, size_t inlen)
     return data;
 }
 
+static int _decode_2bits(const uint8_t *inbuf, size_t inlen,
+                         uint64_t *outbuf, size_t outlen)
+{
+    (void)outbuf;
+    (void)outlen;
+
+    DEBUG("%s: enter (inlen=%d)\n", DEBUG_FUNC, (int)inlen);
+    /*
+    unsigned outpos = 0;
+    uint64_t tmp = 0;
+    unsigned tmppos = 0;
+    bool parsing = false;
+    */
+    for (size_t i = 0; i < inlen; ++i) {
+        for (unsigned j = 0; j < 8; j += 2) {
+            uint8_t val = (inbuf[i] >>j) & 0x3;
+            if (val > 0) {
+                val--;
+                DEBUG("%u", val);
+            }
+            else {
+                DEBUG("-");
+            }
+        }
+    }
+    DEBUG("\n");
+    return 0;
+}
+
 static int _decode_plain(uint32_t threshhold,
                          const uint32_t *inbuf, size_t inlen,
                          uint8_t *outbuf, size_t outlen)
@@ -115,6 +144,32 @@ static int _decode_plain(uint32_t threshhold,
     }
     DEBUG("\n");
     return (pos + 1);
+}
+
+static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
+                         const uint32_t *inbuf, size_t inlen,
+                         uint8_t *outbuf, size_t outlen)
+{
+    DEBUG("%s: enter\n", DEBUG_FUNC);
+    int ret = -1;
+    for (size_t i = 0; i < inlen; ++i) {
+        size_t pos = (inpos + i) % inlen;
+        unsigned val = 0;
+        if (inbuf[pos] > t1) {
+            val = 1;
+        }
+        if (inbuf[pos] > t2) {
+            val = 2;
+        }
+        DEBUG("%d", val);
+        if ((outbuf != NULL) && (outlen > 0)) {
+            ret = (i / 4);
+            outbuf[ret] |= ((val + 1) << ((i % 4) * 2));
+        }
+    }
+    ret++;
+    DEBUG("\n");
+    return ret;
 }
 
 void *_receiver(void *arg)
@@ -165,6 +220,40 @@ void *_sniffer(void *arg)
     }
 }
 
+
+#define BUFLEN              (2048U)
+#define DCBLEN              (BUFLEN/4)
+#define SENSOR_THRESHOLD    (200000UL)
+
+static uint32_t buffer[BUFLEN];
+static uint8_t  outbuf[DCBLEN];
+
+void *_recv_sensor_data(void *arg)
+{
+    (void)arg;
+    DEBUG("%s: enter\n", DEBUG_FUNC);
+
+    msg_init_queue(recv_queue, RECV_QUEUE_LEN);
+
+    memset(buffer, 0, BUFLEN);
+    unsigned counter = 0;
+    while (1) {
+        msg_t m;
+        msg_receive(&m);
+        uint32_t val = m.content.value;
+        size_t pos = counter % BUFLEN;
+        buffer[pos] = val;
+        counter++;
+        if (val > SENSOR_THRESHOLD) {
+            memset(outbuf, 0 , DCBLEN);
+            int ret = _decode_plain2(400, 600, pos, buffer, BUFLEN, outbuf, DCBLEN);
+            if (ret > 0) {
+                _decode_2bits(outbuf, ret, NULL, 0);
+            }
+        }
+    }
+}
+
 int fs1000a_init(fs1000a_t *dev, const fs1000a_params_t *params)
 {
     DEBUG("%s: enter\n", DEBUG_FUNC);
@@ -204,6 +293,12 @@ int fs1000a_enable_sniffer(const fs1000a_t *dev)
 {
     DEBUG("%s: enter\n", DEBUG_FUNC);
     return _run_background_thread(dev, _sniffer);
+}
+
+int fs1000a_enable_sensor_receive(const fs1000a_t *dev)
+{
+    DEBUG("%s: enter\n", DEBUG_FUNC);
+    return _run_background_thread(dev, _recv_sensor_data);
 }
 
 #define NUM_SAMPLES (256U)
