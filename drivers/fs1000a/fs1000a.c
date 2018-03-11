@@ -194,6 +194,35 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
     return outpos;
 }
 
+static int _decode_2bits(const uint8_t *inbuf, size_t inlen,
+                         uint64_t *outbuf, size_t outlen)
+{
+    (void)outbuf;
+    (void)outlen;
+
+    DEBUG("%s: enter (inlen=%d)\n", DEBUG_FUNC, (int)inlen);
+    /*
+    unsigned outpos = 0;
+    uint64_t tmp = 0;
+    unsigned tmppos = 0;
+    bool parsing = false;
+    */
+    for (size_t i = 0; i < inlen; ++i) {
+        for (unsigned j = 0; j < 8; j += 2) {
+            uint8_t val = (inbuf[i] >>j) & 0x3;
+            if (val > 0) {
+                val--;
+                DEBUG("%u", val);
+            }
+            else {
+                DEBUG("-");
+            }
+        }
+    }
+    DEBUG("\n");
+    return 0;
+}
+
 static int _decode_plain(uint32_t threshhold,
                          const uint32_t *inbuf, size_t inlen,
                          uint8_t *outbuf, size_t outlen)
@@ -213,6 +242,32 @@ static int _decode_plain(uint32_t threshhold,
     }
     DEBUG("\n");
     return (pos + 1);
+}
+
+static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
+                         const uint32_t *inbuf, size_t inlen,
+                         uint8_t *outbuf, size_t outlen)
+{
+    DEBUG("%s: enter\n", DEBUG_FUNC);
+    int ret = -1;
+    for (size_t i = 0; i < inlen; ++i) {
+        size_t pos = (inpos + i) % inlen;
+        unsigned val = 0;
+        if (inbuf[pos] > t1) {
+            val = 1;
+        }
+        if (inbuf[pos] > t2) {
+            val = 2;
+        }
+        DEBUG("%d", val);
+        if ((outbuf != NULL) && (outlen > 0)) {
+            ret = (i / 4);
+            outbuf[ret] |= ((val + 1) << ((i % 4) * 2));
+        }
+    }
+    ret++;
+    DEBUG("\n");
+    return ret;
 }
 
 void *_receiver(void *arg)
