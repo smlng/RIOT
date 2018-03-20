@@ -222,12 +222,13 @@ static int _decode_2bits(const uint8_t *inbuf, size_t inlen,
     DEBUG("\n");
     return 0;
 }
-
+#endif
 static int _decode_plain(uint32_t threshhold,
                          const uint32_t *inbuf, size_t inlen,
                          uint8_t *outbuf, size_t outlen)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
+
     int pos = -1;
     /* align input on 4 bits, such that 1100 = 1 and 1010 = 0 */
     size_t start = inlen - ((inlen / 4) * 4);
@@ -246,10 +247,14 @@ static int _decode_plain(uint32_t threshhold,
 
 static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
                          const uint32_t *inbuf, size_t inlen,
-                         uint8_t *outbuf, size_t outlen)
+                         uint64_t *outbuf, size_t outlen)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
-    int ret = -1;
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
+
+    uint64_t u64 = 0;
+    unsigned last = 2;
+    unsigned shift = 0;
+    unsigned outpos = 0;
     for (size_t i = 0; i < inlen; ++i) {
         size_t pos = (inpos + i) % inlen;
         unsigned val = 0;
@@ -258,16 +263,30 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
         }
         if (inbuf[pos] > t2) {
             val = 2;
+            u64 = 0;
+            shift = 0;
+        }
+        if ((val < 2) && (last < 2)) {
+            if ((last == 1) && (val == 0)) {
+                u64 |= 1ULL << shift;
+            }
+            last = 2;
+            ++shift;
+        }
+        else {
+            last = val;
         }
         DEBUG("%d", val);
-        if ((outbuf != NULL) && (outlen > 0)) {
-            ret = (i / 4);
-            outbuf[ret] |= ((val + 1) << ((i % 4) * 2));
+
+        if ((shift == 64) && (outbuf != NULL) &&
+            (outlen > 0) && (outpos < outlen) && (u64 > 0)) {
+            outbuf[outpos++] = u64;
+            shift = 0;
+            u64 = 0;
         }
     }
-    ret++;
     DEBUG("\n");
-    return ret;
+    return outpos;
 }
 
 void *_receiver(void *arg)
