@@ -21,7 +21,9 @@
 
 #include <string.h>
 
+#include "log.h"
 #include "fs1000a.h"
+#include "fmt.h"
 #include "msg.h"
 #include "thread.h"
 #include "xtimer.h"
@@ -60,7 +62,7 @@ static void _recv_cb(void *arg)
     (void)arg;
     uint32_t now = xtimer_now_usec();
     msg_t m;
-    m.content.value = now - last;
+    m.content.value = (uint32_t)(now - last);
 
     if (rt > KERNEL_PID_UNDEF) {
         msg_send(&m, rt);
@@ -71,7 +73,8 @@ static void _recv_cb(void *arg)
 
 static uint32_t _decode_4bits(const uint8_t *inbuf, size_t inlen)
 {
-    DEBUG("%s: enter (inlen=%d)\n", DEBUG_FUNC, (int)inlen);
+    LOG_DEBUG("%s: enter (inlen=%d)\n", DEBUG_FUNC, (int)inlen);
+
     uint32_t data = 0;
     for (size_t i = 0; i < (inlen * 2); ++i) {
         uint8_t val = 0;
@@ -95,7 +98,7 @@ static uint32_t _decode_4bits(const uint8_t *inbuf, size_t inlen)
     DEBUG("data=0x%"PRIx32"\n", data);
     return data;
 }
-
+#if 0
 static int _decode_2bits(const uint8_t *inbuf, size_t inlen,
                          uint64_t *outbuf, size_t outlen)
 {
@@ -124,12 +127,13 @@ static int _decode_2bits(const uint8_t *inbuf, size_t inlen,
     DEBUG("\n");
     return 0;
 }
-
+#endif
 static int _decode_plain(uint32_t threshhold,
                          const uint32_t *inbuf, size_t inlen,
                          uint8_t *outbuf, size_t outlen)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
+
     int pos = -1;
     /* align input on 4 bits, such that 1100 = 1 and 1010 = 0 */
     size_t start = inlen - ((inlen / 4) * 4);
@@ -148,10 +152,14 @@ static int _decode_plain(uint32_t threshhold,
 
 static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
                          const uint32_t *inbuf, size_t inlen,
-                         uint8_t *outbuf, size_t outlen)
+                         uint64_t *outbuf, size_t outlen)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
-    int ret = -1;
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
+
+    uint64_t u64 = 0;
+    unsigned last = 2;
+    unsigned shift = 0;
+    unsigned outpos = 0;
     for (size_t i = 0; i < inlen; ++i) {
         size_t pos = (inpos + i) % inlen;
         unsigned val = 0;
@@ -160,22 +168,36 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
         }
         if (inbuf[pos] > t2) {
             val = 2;
+            u64 = 0;
+            shift = 0;
+        }
+        if ((val < 2) && (last < 2)) {
+            if ((last == 1) && (val == 0)) {
+                u64 |= 1ULL << shift;
+            }
+            last = 2;
+            ++shift;
+        }
+        else {
+            last = val;
         }
         DEBUG("%d", val);
-        if ((outbuf != NULL) && (outlen > 0)) {
-            ret = (i / 4);
-            outbuf[ret] |= ((val + 1) << ((i % 4) * 2));
+
+        if ((shift == 64) && (outbuf != NULL) &&
+            (outlen > 0) && (outpos < outlen) && (u64 > 0)) {
+            outbuf[outpos++] = u64;
+            shift = 0;
+            u64 = 0;
         }
     }
-    ret++;
     DEBUG("\n");
-    return ret;
+    return outpos;
 }
 
 void *_receiver(void *arg)
 {
     (void) arg;
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
 
     msg_init_queue(recv_queue, RECV_QUEUE_LEN);
 
@@ -211,8 +233,8 @@ void *_receiver(void *arg)
 void *_sniffer(void *arg)
 {
     (void)arg;
-    puts("FS1000A 433 MHz sniffer.");
-    puts("");
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
+
     while (1) {
         msg_t m;
         msg_receive(&m);
@@ -222,16 +244,16 @@ void *_sniffer(void *arg)
 
 
 #define BUFLEN              (2048U)
-#define DCBLEN              (BUFLEN/4)
-#define SENSOR_THRESHOLD    (200000UL)
+#define DCBLEN              (32U)
+#define SENSOR_THRESHOLD    (100000UL)
 
 static uint32_t buffer[BUFLEN];
-static uint8_t  outbuf[DCBLEN];
+static uint64_t outbuf[DCBLEN];
 
 void *_recv_sensor_data(void *arg)
 {
     (void)arg;
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
 
     msg_init_queue(recv_queue, RECV_QUEUE_LEN);
 
@@ -245,10 +267,15 @@ void *_recv_sensor_data(void *arg)
         buffer[pos] = val;
         counter++;
         if (val > SENSOR_THRESHOLD) {
-            memset(outbuf, 0 , DCBLEN);
-            int ret = _decode_plain2(400, 600, pos, buffer, BUFLEN, outbuf, DCBLEN);
+            memset(outbuf, 0, DCBLEN);
+            unsigned ret = _decode_plain2(380, 580, pos, buffer, BUFLEN, outbuf, DCBLEN);
             if (ret > 0) {
-                _decode_2bits(outbuf, ret, NULL, 0);
+                DEBUG("Decoded values U64 (%u):\n", ret);
+                for (unsigned i = 0; i < ret; ++i) {
+                    print_u64_hex(outbuf[i]);
+                    puts("");
+                }
+                DEBUG("===================\n");
             }
         }
     }
@@ -256,7 +283,7 @@ void *_recv_sensor_data(void *arg)
 
 int fs1000a_init(fs1000a_t *dev, const fs1000a_params_t *params)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
 
     memcpy(&dev->p, params, sizeof(fs1000a_params_t));
 
@@ -265,18 +292,18 @@ int fs1000a_init(fs1000a_t *dev, const fs1000a_params_t *params)
 
 static int _run_background_thread(const fs1000a_t *dev, void* func)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
     if ((dev->p.recv_pin != GPIO_UNDEF) && (rt <= KERNEL_PID_UNDEF)) {
         rt = thread_create(recv_stack, sizeof(recv_stack),
                                        THREAD_PRIORITY_MAIN - 1,
                                        THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
                                        func, NULL, "fs1000a");
         if (rt < 0) {
-            DEBUG("%s: thread_create failed!\n", DEBUG_FUNC);
+            LOG_ERROR("%s: thread_create failed!\n", DEBUG_FUNC);
             return -1;
         }
         if (gpio_init_int(dev->p.recv_pin, GPIO_IN, GPIO_BOTH, _recv_cb, NULL) < 0) {
-            DEBUG("%s: gpio_init_int failed!\n", DEBUG_FUNC);
+            LOG_ERROR("%s: gpio_init_int failed!\n", DEBUG_FUNC);
             return -2;
         }
     }
@@ -285,19 +312,19 @@ static int _run_background_thread(const fs1000a_t *dev, void* func)
 
 int fs1000a_enable_switch_receive(const fs1000a_t *dev)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
     return _run_background_thread(dev, _receiver);
 }
 
 int fs1000a_enable_sniffer(const fs1000a_t *dev)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
     return _run_background_thread(dev, _sniffer);
 }
 
 int fs1000a_enable_sensor_receive(const fs1000a_t *dev)
 {
-    DEBUG("%s: enter\n", DEBUG_FUNC);
+    LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
     return _run_background_thread(dev, _recv_sensor_data);
 }
 
@@ -306,12 +333,12 @@ int fs1000a_analyse_spectrum(const fs1000a_t *dev)
 {
     msg_init_queue(recv_queue, RECV_QUEUE_LEN);
     if (rt > KERNEL_PID_UNDEF) {
-        DEBUG("ERROR: another background thread is running!\n");
+        LOG_ERROR("ERROR: another background thread is running!\n");
         return (-1);
     }
     rt = thread_getpid();
     if (gpio_init_int(dev->p.recv_pin, GPIO_IN, GPIO_BOTH, _recv_cb, NULL) < 0) {
-        DEBUG("%s: gpio_init_int failed!\n", DEBUG_FUNC);
+        LOG_ERROR("%s: gpio_init_int failed!\n", DEBUG_FUNC);
         return -2;
     }
     /* stats: max_now, max_all, min_now, min_all, avg_now, avg_all */

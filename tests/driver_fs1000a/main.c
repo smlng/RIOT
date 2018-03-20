@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-//#define FS1000A_PARAM_RECV_PIN      GPIO_PIN(2, 14)
+#define FS1000A_PARAM_RECV_PIN      GPIO_PIN(0, 28)
 
 #include "fs1000a.h"
 #include "fs1000a_params.h"
@@ -39,10 +39,10 @@ int main(void)
         return 1;
     }
 
-    //fs1000a_enable_switch_receive(&dev);
+    fs1000a_enable_switch_receive(&dev);
     //fs1000a_enable_sniffer(&dev);
     //fs1000a_analyse_spectrum(&dev);
-    fs1000a_enable_sensor_receive(&dev);
+    //fs1000a_enable_sensor_receive(&dev);
 
     while(1) {
         xtimer_sleep(SLEEP_S);
