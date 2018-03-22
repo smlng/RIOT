@@ -38,6 +38,7 @@ static msg_t recv_queue[RECV_QUEUE_LEN];
 static uint32_t timings[FS1000A_RECV_BUFLEN];
 static uint32_t last = 0;
 static kernel_pid_t rt = KERNEL_PID_UNDEF;
+static kernel_pid_t sub = KERNEL_PID_UNDEF;
 
 static inline uint32_t abs_diff(uint32_t a, uint32_t b)
 {
@@ -244,7 +245,7 @@ void *_sniffer(void *arg)
 
 
 #define BUFLEN              (2048U)
-#define DCBLEN              (32U)
+#define DCBLEN              (16U)
 #define SENSOR_THRESHOLD    (100000UL)
 
 static uint32_t buffer[BUFLEN];
@@ -271,9 +272,18 @@ void *_recv_sensor_data(void *arg)
             unsigned ret = _decode_plain2(380, 580, pos, buffer, BUFLEN, outbuf, DCBLEN);
             if (ret > 0) {
                 DEBUG("Decoded values U64 (%u):\n", ret);
-                for (unsigned i = 0; i < ret; ++i) {
-                    print_u64_hex(outbuf[i]);
+                fs1000a_sensor_data_t sdat;
+                for (unsigned i = 1, pos = 0; (i <= ret) && (pos < sizeof(sdat.values)); ++i) {
+                    if ((pos == 0) || ((pos > 0) && (sdat.values[pos - 1] != outbuf[ret - i]))) {
+                            sdat.values[pos++] = outbuf[ret - i];
+                    }
+                    print_u64_hex(outbuf[ret - i]);
                     puts("");
+                }
+                if (sub != KERNEL_PID_UNDEF) {
+                    msg_t m;
+                    m.content.ptr = &sdat;
+                    msg_send(&m, sub);
                 }
                 DEBUG("===================\n");
             }
@@ -322,9 +332,10 @@ int fs1000a_enable_sniffer(const fs1000a_t *dev)
     return _run_background_thread(dev, _sniffer);
 }
 
-int fs1000a_enable_sensor_receive(const fs1000a_t *dev)
+int fs1000a_enable_sensor_receive(const fs1000a_t *dev, kernel_pid_t subscriber)
 {
     LOG_DEBUG("%s: enter\n", DEBUG_FUNC);
+    sub = subscriber;
     return _run_background_thread(dev, _recv_sensor_data);
 }
 
