@@ -89,6 +89,10 @@ typedef struct {
     fs1000a_params_t p;
 } fs1000a_t;
 
+typedef struct {
+    uint64_t values[2];
+} fs1000a_sensor_data_t;
+
 /**
  * @brief init function
  *
@@ -111,7 +115,7 @@ int fs1000a_analyse_spectrum(const fs1000a_t *dev);
  */
 int fs1000a_enable_switch_receive(const fs1000a_t *dev);
 
-int fs1000a_enable_sensor_receive(const fs1000a_t *dev);
+int fs1000a_enable_sensor_receive(const fs1000a_t *dev, kernel_pid_t subscriber);
 
 /**
  * @brief enable background sniffer for 433 MHz

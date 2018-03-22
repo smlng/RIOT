@@ -25,6 +25,7 @@
 
 #include "fs1000a.h"
 #include "fs1000a_params.h"
+#include "thread.h"
 #include "xtimer.h"
 
 #define SLEEP_S     (2U)
@@ -39,13 +40,16 @@ int main(void)
         return 1;
     }
 
-    fs1000a_enable_switch_receive(&dev);
+    //fs1000a_enable_switch_receive(&dev);
     //fs1000a_enable_sniffer(&dev);
     //fs1000a_analyse_spectrum(&dev);
-    //fs1000a_enable_sensor_receive(&dev);
+    fs1000a_enable_sensor_receive(&dev, thread_getpid());
 
     while(1) {
-        xtimer_sleep(SLEEP_S);
+        msg_t m;
+        msg_receive(&m);
+        fs1000a_sensor_data_t *sdat = (fs1000a_sensor_data_t *)m.content.ptr;
+        printf("V0: 0x%" PRIx64 ", V1: 0x%" PRIx64 "\n", sdat->values[0], sdat->values[1]);
     }
     return 0;
 }
