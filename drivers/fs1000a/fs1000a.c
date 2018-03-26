@@ -273,8 +273,9 @@ void *_recv_sensor_data(void *arg)
             if (ret > 0) {
                 DEBUG("Decoded values U64 (%u):\n", ret);
                 fs1000a_sensor_data_t sdat;
-                for (unsigned i = 1, pos = 0; (i <= ret) && (pos < 2); ++i) {
-                    if ((pos == 0) || ((pos > 0) && (sdat.values[pos - 1] != outbuf[ret - i]))) {
+                unsigned pos = 0;
+                for (unsigned i = 1; i <= ret; ++i) {
+                    if ((pos == 0) || ((pos < 2) && (sdat.values[pos - 1] != outbuf[ret - i]))) {
                             sdat.values[pos++] = outbuf[ret - i];
                     }
                     print_u64_hex(outbuf[ret - i]);
