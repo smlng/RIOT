@@ -184,8 +184,8 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
         }
         DEBUG("%d", val);
 
-        if ((shift == 64) && (outbuf != NULL) &&
-            (outlen > 0) && (outpos < outlen) && (u64 > 0)) {
+        if ((shift == 64) && (u64 > 0) &&
+            (outbuf != NULL) && (outlen > 0) && (outpos < outlen)) {
             outbuf[outpos++] = u64;
             shift = 0;
             u64 = 0;
@@ -273,14 +273,14 @@ void *_recv_sensor_data(void *arg)
             if (ret > 0) {
                 DEBUG("Decoded values U64 (%u):\n", ret);
                 fs1000a_sensor_data_t sdat;
-                for (unsigned i = 1, pos = 0; (i <= ret) && (pos < sizeof(sdat.values)); ++i) {
+                for (unsigned i = 1, pos = 0; (i <= ret) && (pos < 2); ++i) {
                     if ((pos == 0) || ((pos > 0) && (sdat.values[pos - 1] != outbuf[ret - i]))) {
                             sdat.values[pos++] = outbuf[ret - i];
                     }
                     print_u64_hex(outbuf[ret - i]);
                     puts("");
                 }
-                if (sub != KERNEL_PID_UNDEF) {
+                if ((sub != KERNEL_PID_UNDEF) && (pos == 2)) {
                     msg_t m;
                     m.content.ptr = &sdat;
                     msg_send(&m, sub);
