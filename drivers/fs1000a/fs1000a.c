@@ -36,9 +36,9 @@
 static char recv_stack[THREAD_STACKSIZE_DEFAULT];
 static msg_t recv_queue[RECV_QUEUE_LEN];
 static uint32_t timings[FS1000A_RECV_BUFLEN];
-static uint32_t last = 0;
-static kernel_pid_t rt = KERNEL_PID_UNDEF;
-static kernel_pid_t sub = KERNEL_PID_UNDEF;
+static volatile uint32_t last = 0;
+static volatile kernel_pid_t rt = KERNEL_PID_UNDEF;
+static volatile kernel_pid_t sub = KERNEL_PID_UNDEF;
 
 static inline uint32_t abs_diff(uint32_t a, uint32_t b)
 {
