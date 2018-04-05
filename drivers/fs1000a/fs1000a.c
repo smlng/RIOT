@@ -159,7 +159,7 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
 
     uint64_t u64 = 0;
     unsigned last = 2;
-    unsigned shift = 0;
+    unsigned shift = 63;
     unsigned outpos = 0;
     for (size_t i = 0; i < inlen; ++i) {
         size_t pos = (inpos + i) % inlen;
@@ -170,21 +170,21 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
         if (inbuf[pos] > t2) {
             val = 2;
             u64 = 0;
-            shift = 0;
+            shift = 63;
         }
         if ((val < 2) && (last < 2)) {
             if ((last == 1) && (val == 0)) {
                 u64 |= 1ULL << shift;
             }
             last = 2;
-            ++shift;
+            --shift;
         }
         else {
             last = val;
         }
         DEBUG("%d", val);
 
-        if ((shift == 64) && (u64 > 0) &&
+        if ((shift == 0) && (u64 > 0) &&
             (outbuf != NULL) && (outlen > 0) && (outpos < outlen)) {
             outbuf[outpos++] = u64;
             shift = 0;
