@@ -42,8 +42,8 @@ int main(void)
 
     //fs1000a_enable_switch_receive(&dev);
     //fs1000a_enable_sniffer(&dev);
-    //fs1000a_analyse_spectrum(&dev);
-    fs1000a_enable_sensor_receive(&dev, thread_getpid());
+    fs1000a_analyse_spectrum(&dev);
+    //fs1000a_enable_sensor_receive(&dev, thread_getpid());
 
     while(1) {
         msg_t m;

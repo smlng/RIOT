@@ -159,7 +159,7 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
 
     uint64_t u64 = 0;
     unsigned last = 2;
-    unsigned shift = 63;
+    unsigned shift = 64;
     unsigned outpos = 0;
     for (size_t i = 0; i < inlen; ++i) {
         size_t pos = (inpos + i) % inlen;
@@ -170,14 +170,14 @@ static int _decode_plain2(uint32_t t1, uint32_t t2, size_t inpos,
         if (inbuf[pos] > t2) {
             val = 2;
             u64 = 0;
-            shift = 63;
+            shift = 64;
         }
         if ((val < 2) && (last < 2)) {
+            --shift;
             if ((last == 1) && (val == 0)) {
                 u64 |= 1ULL << shift;
             }
             last = 2;
-            --shift;
         }
         else {
             last = val;
@@ -246,7 +246,7 @@ void *_sniffer(void *arg)
 
 #define BUFLEN              (2048U)
 #define DCBLEN              (16U)
-#define SENSOR_THRESHOLD    (100000UL)
+#define SENSOR_THRESHOLD    (30000UL)
 
 static uint32_t buffer[BUFLEN];
 static uint64_t outbuf[DCBLEN];
@@ -310,13 +310,16 @@ static int _run_background_thread(const fs1000a_t *dev, void* func)
                                        THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
                                        func, NULL, "fs1000a");
         if (rt < 0) {
-            LOG_ERROR("%s: thread_create failed!\n", DEBUG_FUNC);
+            DEBUG("%s: thread_create failed!\n", DEBUG_FUNC);
             return -1;
         }
         if (gpio_init_int(dev->p.recv_pin, GPIO_IN, GPIO_BOTH, _recv_cb, NULL) < 0) {
-            LOG_ERROR("%s: gpio_init_int failed!\n", DEBUG_FUNC);
+            DEBUG("%s: gpio_init_int failed!\n", DEBUG_FUNC);
             return -2;
         }
+    }
+    else {
+        DEBUG("thread already running\n");
     }
     return 0;
 }
