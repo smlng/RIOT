@@ -76,7 +76,7 @@ extern "C" {
     { .dev = 0, .pin = GPIO_PIN(PORT_B, 1), .chan = 9 }, \
 }
 
-#define ADC_NUMOF           10
+#define ADC_NUMOF           2
 /** @} */
 
 /**
