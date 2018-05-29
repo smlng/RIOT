@@ -45,6 +45,7 @@ void* timer_func(void* arg)
     while (running) {
         xtimer_usleep(*(uint32_t *)(arg));
     }
+    printf("exit thread %s\n", thread_getname(thread_getpid()));
     return NULL;
 }
 
@@ -70,10 +71,8 @@ int main(void)
         printf("Testing (%3u%%)\n", percent);
     }
     puts("Testing (100%)");
-    ps();
     running = false;
-    xtimer_usleep(5000);
-    ps();
+    xtimer_usleep(sleep_timer1 +  sleep_timer2);
     puts("[SUCCESS]");
     return 0;
 }
