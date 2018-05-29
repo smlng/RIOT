@@ -24,10 +24,11 @@
  * @}
  */
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "xtimer.h"
 #include "thread.h"
-#include "log.h"
+#include "ps.h"
 
 #define TEST_TIME_S             (10LU)
 #define TEST_INTERVAL_MS        (100LU)
@@ -36,17 +37,19 @@
 char stack_timer1[TEST_TIMER_STACKSIZE];
 char stack_timer2[TEST_TIMER_STACKSIZE];
 
+static volatile bool running = true;
+
 void* timer_func(void* arg)
 {
-    LOG_DEBUG("run thread %" PRIkernel_pid "\n", thread_getpid());
-    while(1) {
+    printf("run thread %" PRIkernel_pid "\n", thread_getpid());
+    while (running) {
         xtimer_usleep(*(uint32_t *)(arg));
     }
+    return NULL;
 }
 
 int main(void)
 {
-    LOG_DEBUG("[INIT]\n");
     uint32_t sleep_timer1 = 1000;
     uint32_t sleep_timer2 = 1100;
 
@@ -67,6 +70,10 @@ int main(void)
         printf("Testing (%3u%%)\n", percent);
     }
     puts("Testing (100%)");
+    ps();
+    running = false;
+    xtimer_usleep(5000);
+    ps();
     puts("[SUCCESS]");
     return 0;
 }
