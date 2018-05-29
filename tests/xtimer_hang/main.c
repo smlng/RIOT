@@ -41,7 +41,7 @@ static volatile bool running = true;
 
 void* timer_func(void* arg)
 {
-    printf("run thread %" PRIkernel_pid "\n", thread_getpid());
+    printf("run thread %s\n", thread_getname(thread_getpid()));
     while (running) {
         xtimer_usleep(*(uint32_t *)(arg));
     }
