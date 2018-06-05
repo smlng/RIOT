@@ -3,7 +3,7 @@ include ../Makefile.tests_common
 
 BOARD := stm32f4discovery
 
-FEATURES_REQUIRED += periph_stm32_eth
+FEATURES_REQUIRED += periph_eth
 
 USEMODULE += lwip
 USEMODULE += lwip_netdev
