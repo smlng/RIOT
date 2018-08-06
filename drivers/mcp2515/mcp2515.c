@@ -89,7 +89,9 @@ int mcp2515_init(candev_mcp2515_t *dev, void(*irq_handler_cb)(void*))
 {
     int res;
     gpio_init_int(dev->conf->int_pin, GPIO_IN_PU, GPIO_FALLING, (gpio_cb_t)irq_handler_cb, (void *)dev);
-    gpio_init(dev->conf->rst_pin, GPIO_OUT);
+    if (dev->conf->rst_pin != GPIO_UNDEF) {
+        gpio_init(dev->conf->rst_pin, GPIO_OUT);
+    }
     /*the CS pin should be initialized & set in board.c to avoid conflict with other SPI devices */
 
     res = mcp2515_spi_init(dev);
@@ -101,10 +103,12 @@ int mcp2515_init(candev_mcp2515_t *dev, void(*irq_handler_cb)(void*))
 
 void mcp2515_reset(candev_mcp2515_t *dev)
 {
-    gpio_clear(dev->conf->rst_pin);
-    xtimer_usleep(RESET_DELAY);
-    gpio_set(dev->conf->rst_pin);
-    xtimer_usleep(ost_delay(dev));
+    if (dev->conf->rst_pin != GPIO_UNDEF) {
+        gpio_clear(dev->conf->rst_pin);
+        xtimer_usleep(RESET_DELAY);
+        gpio_set(dev->conf->rst_pin);
+        xtimer_usleep(ost_delay(dev));
+    }
 }
 
 static void fill_standard_id(uint32_t id, uint8_t *bytebuf)

@@ -37,17 +37,10 @@
 
 #include "shell.h"
 #include "candev_mcp2515.h"
+#include "mcp2515_params.h"
 
 static candev_mcp2515_t dev;
 struct can_bittiming timing;
-
-static const candev_mcp2515_conf_t conf = {
-    .spi = SPI_1,
-    .cs_pin = CAN2_SS_PIN,
-    .rst_pin = CAN2_RST_PIN,
-    .int_pin = CAN2_INT_PIN,
-};
-
 
 static const shell_command_t shell_commands[] = {
     { "send", "send some data", _send },
@@ -59,7 +52,7 @@ int main(void)
 {
     puts("MCP2515 can driver test application\n");
     printf("Initializing MCP2515 at SPI_%i... ", TEST_MCP2515_SPI);
-    if (candev_mcp2515_init(&dev, &timing, &conf) != 0) {
+    if (candev_mcp2515_init(&dev, &timing, &candev_mcp2515_conf[0]) != 0) {
         puts("Failed to initialize MCP2515 driver");
         return 1;
     }

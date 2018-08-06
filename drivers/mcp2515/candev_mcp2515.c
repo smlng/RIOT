@@ -32,7 +32,7 @@
 #include "sched.h"
 #include "mutex.h"
 
-#define ENABLE_DEBUG (0)
+#define ENABLE_DEBUG (1)
 #include "debug.h"
 
 #define MAILBOX_USED 1
@@ -41,7 +41,7 @@
 #define MAILBOX_TO_INTR(mailbox) (INT_RX0 + (mailbox))
 
 #ifndef CANDEV_MCP2515_DEFAULT_BITRATE
-#define CANDEV_MCP2515_DEFAULT_BITRATE 500000
+#define CANDEV_MCP2515_DEFAULT_BITRATE 1000000
 #endif
 
 #ifndef CANDEV_MCP2515_DEFAULT_SPT
@@ -114,6 +114,7 @@ void candev_mcp2515_init(candev_mcp2515_t *dev, const candev_mcp2515_conf_t *con
 
 static void _mcp2515_irq_handler(void *arg)
 {
+    puts("mcp2515 irq");
     candev_mcp2515_t *candev = (candev_mcp2515_t *) arg;
     _send_event(candev, CANDEV_EVENT_ISR, NULL);
 }
@@ -151,7 +152,7 @@ static int _send(candev_t *candev, const struct can_frame *frame)
 
     mode = mcp2515_get_mode(dev);
     if (mode != MODE_NORMAL && mode != MODE_LOOPBACK) {
-       return -EINVAL; 
+       return -EINVAL;
     }
 
     DEBUG("Inside mcp2515 send\n");
