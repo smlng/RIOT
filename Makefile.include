@@ -21,6 +21,9 @@ PKGDIRBASE     ?= $(BINDIRBASE)/pkg/$(BOARD)
 DLCACHE        ?= $(RIOTTOOLS)/dlcache/dlcache.sh
 DLCACHE_DIR    ?= $(RIOTBASE)/.dlcache
 
+# TODO
+RIOTBUILDOUT ?= $(BINDIRBASE)/buildout
+
 __DIRECTORY_VARIABLES := \
   RIOTBASE \
   RIOTCPU \
@@ -36,6 +39,7 @@ __DIRECTORY_VARIABLES := \
   GITCACHE \
   PKGDIRBASE \
   DLCACHE_DIR \
+  RIOTBUILDOUT \
   #
 
 # Make all paths absolute.
@@ -53,6 +57,7 @@ override BINDIRBASE     := $(abspath $(BINDIRBASE))
 override BINDIR         := $(abspath $(BINDIR))
 override PKGDIRBASE     := $(abspath $(PKGDIRBASE))
 override DLCACHE_DIR    := $(abspath $(DLCACHE_DIR))
+override RIOTBUILDOUT   := $(abspath $(RIOTBUILDOUT))
 
 # Ensure that all directories are set and don't contain spaces.
 ifneq (, $(filter-out 1, $(foreach v,$(__DIRECTORY_VARIABLES),$(words $($(v))))))
