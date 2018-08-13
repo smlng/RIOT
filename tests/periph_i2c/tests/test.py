@@ -14,8 +14,7 @@ import argparse
 import time
 import logging
 
-import periph_i2c_if
-from if_lib import bpt_if
+from if_lib import bpt_if, periph_i2c_if
 
 BPT_ADDR = 85
 BPT_USER_REG = 152
@@ -141,22 +140,22 @@ def mutex_test(i2c, bpt):
 
     setup_test(t, i2c, bpt)
 
-    num_of_dev = t.run_test(i2c.i2c_get_devs(), "Success")[0]
+    num_of_dev = t.run_test(i2c.get_devs(), "Success")[0]
 
     for d_num in range(0, num_of_dev):
-        t.run_test(i2c.i2c_release(d_num), "Success")
+        t.run_test(i2c.release(d_num), "Success")
 
-        t.run_test(i2c.i2c_acquire(d_num), "Success")
+        t.run_test(i2c.acquire(d_num), "Success")
 
         if d_num == 0:
-            t.run_test(i2c.i2c_read_reg(d_num, BPT_ADDR, BPT_USER_REG),
+            t.run_test(i2c.read_reg(d_num, BPT_ADDR, BPT_USER_REG),
                        "Success", [0])
 
-        t.run_test(i2c.i2c_release(d_num), "Success")
+        t.run_test(i2c.release(d_num), "Success")
 
-        t.skip_test("i2c.i2c_read_byte(d_num, BPT_ADDR), Error")
-        t.skip_test("i2c.i2c_acquire(d_num), Success")
-        t.skip_test("i2c.i2c_acquire(d_num), Timeout")
+        t.skip_test("i2c.read_byte(d_num, BPT_ADDR), Error")
+        t.skip_test("i2c.acquire(d_num), Success")
+        t.skip_test("i2c.acquire(d_num), Timeout")
 
     return t
 
@@ -170,39 +169,39 @@ def read_test(i2c, bpt):
     setup_test(t, i2c, bpt)
 
     d_num = 0
-    t.run_test(i2c.i2c_release(d_num), "Success")
-    t.run_test(i2c.i2c_acquire(d_num), "Success")
-    t.run_test(i2c.i2c_read_reg(d_num, BPT_ADDR, BPT_USER_REG), "Success", [0])
-    t.run_test(i2c.i2c_read_reg(d_num, BPT_ADDR+1, BPT_USER_REG), "Error")
-    t.run_test(i2c.i2c_read_reg(d_num, BPT_ADDR, BPT_USER_REG+1),
+    t.run_test(i2c.release(d_num), "Success")
+    t.run_test(i2c.acquire(d_num), "Success")
+    t.run_test(i2c.read_reg(d_num, BPT_ADDR, BPT_USER_REG), "Success", [0])
+    t.run_test(i2c.read_reg(d_num, BPT_ADDR+1, BPT_USER_REG), "Error")
+    t.run_test(i2c.read_reg(d_num, BPT_ADDR, BPT_USER_REG+1),
                "Success", [1])
-    t.run_test(i2c.i2c_read_regs(d_num, BPT_ADDR, BPT_USER_REG, 1),
+    t.run_test(i2c.read_regs(d_num, BPT_ADDR, BPT_USER_REG, 1),
                "Success", [0])
-    t.run_test(i2c.i2c_read_regs(d_num, BPT_ADDR, BPT_USER_REG+1, 1),
+    t.run_test(i2c.read_regs(d_num, BPT_ADDR, BPT_USER_REG+1, 1),
                "Success", [1])
-    t.run_test(i2c.i2c_read_regs(d_num, BPT_ADDR, BPT_USER_REG, 2),
+    t.run_test(i2c.read_regs(d_num, BPT_ADDR, BPT_USER_REG, 2),
                "Success", [0, 1])
-    t.run_test(i2c.i2c_read_regs(d_num, BPT_ADDR, BPT_USER_REG, 3),
+    t.run_test(i2c.read_regs(d_num, BPT_ADDR, BPT_USER_REG, 3),
                "Success", [0, 1, 2])
-    t.run_test(i2c.i2c_read_regs(d_num, BPT_ADDR-1, BPT_USER_REG, 1), "Error")
-    t.run_test(i2c.i2c_read_byte(d_num, BPT_ADDR,), "Success", [0])
-    t.run_test(i2c.i2c_read_byte(d_num, BPT_ADDR-2), "Error")
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1), "Success", [0])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 2), "Success", [0, 1])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 3), "Success", [0, 1, 2])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR+4, 3), "Error")
-    t.run_test(i2c.i2c_release(d_num), "Success")
+    t.run_test(i2c.read_regs(d_num, BPT_ADDR-1, BPT_USER_REG, 1), "Error")
+    t.run_test(i2c.read_byte(d_num, BPT_ADDR,), "Success", [0])
+    t.run_test(i2c.read_byte(d_num, BPT_ADDR-2), "Error")
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1), "Success", [0])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 2), "Success", [0, 1])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 3), "Success", [0, 1, 2])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR+4, 3), "Error")
+    t.run_test(i2c.release(d_num), "Success")
     return t
 
 
 def check_write_reg(t, d_num, addr, reg, val, i2c):
-    t.run_test(i2c.i2c_write_reg(d_num, addr, reg, val[0]), "Success")
-    t.run_test(i2c.i2c_read_reg(d_num, addr, reg), "Success", val)
+    t.run_test(i2c.write_reg(d_num, addr, reg, val[0]), "Success")
+    t.run_test(i2c.read_reg(d_num, addr, reg), "Success", val)
 
 
 def check_write_regs(t, d_num, addr, reg, val, i2c):
-    t.run_test(i2c.i2c_write_regs(d_num, addr, reg, val), "Success")
-    t.run_test(i2c.i2c_read_regs(d_num, addr, reg, len(val)), "Success", val)
+    t.run_test(i2c.write_regs(d_num, addr, reg, val), "Success")
+    t.run_test(i2c.read_regs(d_num, addr, reg, len(val)), "Success", val)
 
 
 def write_test(i2c, bpt):
@@ -215,14 +214,14 @@ def write_test(i2c, bpt):
 
     d_num = 0
 
-    t.run_test(i2c.i2c_release(d_num), "Success")
-    t.run_test(i2c.i2c_acquire(d_num), "Success")
+    t.run_test(i2c.release(d_num), "Success")
+    t.run_test(i2c.acquire(d_num), "Success")
 
     check_write_reg(t, d_num, BPT_ADDR, BPT_USER_REG, [42], i2c)
     check_write_reg(t, d_num, BPT_ADDR, BPT_USER_REG, [0], i2c)
     check_write_reg(t, d_num, BPT_ADDR, BPT_USER_REG+1, [41], i2c)
     check_write_reg(t, d_num, BPT_ADDR, BPT_USER_REG+1, [1], i2c)
-    t.run_test(i2c.i2c_write_reg(d_num, BPT_ADDR-4, BPT_USER_REG, 0), "Error")
+    t.run_test(i2c.write_reg(d_num, BPT_ADDR-4, BPT_USER_REG, 0), "Error")
 
     check_write_regs(t, d_num, BPT_ADDR, BPT_USER_REG, [44], i2c)
     check_write_regs(t, d_num, BPT_ADDR, BPT_USER_REG, [0], i2c)
@@ -230,31 +229,31 @@ def write_test(i2c, bpt):
     check_write_regs(t, d_num, BPT_ADDR, BPT_USER_REG+1, [1, 2], i2c)
     check_write_regs(t, d_num, BPT_ADDR, BPT_USER_REG, [47, 48, 49], i2c)
     check_write_regs(t, d_num, BPT_ADDR, BPT_USER_REG, [0, 1, 2], i2c)
-    t.run_test(i2c.i2c_write_regs(d_num, BPT_ADDR-5, BPT_USER_REG, [0]),
+    t.run_test(i2c.write_regs(d_num, BPT_ADDR-5, BPT_USER_REG, [0]),
                "Error")
 
-    t.run_test(i2c.i2c_write_byte(d_num, BPT_ADDR, BPT_USER_REG+1), "Success")
-    t.run_test(i2c.i2c_read_byte(d_num, BPT_ADDR), "Success", [1])
-    t.run_test(i2c.i2c_write_byte(d_num, BPT_ADDR, BPT_USER_REG), "Success")
-    t.run_test(i2c.i2c_read_byte(d_num, BPT_ADDR), "Success", [0])
-    t.run_test(i2c.i2c_write_byte(d_num, BPT_ADDR+5, 0), "Error")
+    t.run_test(i2c.write_byte(d_num, BPT_ADDR, BPT_USER_REG+1), "Success")
+    t.run_test(i2c.read_byte(d_num, BPT_ADDR), "Success", [1])
+    t.run_test(i2c.write_byte(d_num, BPT_ADDR, BPT_USER_REG), "Success")
+    t.run_test(i2c.read_byte(d_num, BPT_ADDR), "Success", [0])
+    t.run_test(i2c.write_byte(d_num, BPT_ADDR+5, 0), "Error")
 
-    t.run_test(i2c.i2c_write_bytes(d_num, BPT_ADDR, [BPT_USER_REG+1]),
+    t.run_test(i2c.write_bytes(d_num, BPT_ADDR, [BPT_USER_REG+1]),
                "Success")
-    t.run_test(i2c.i2c_read_byte(d_num, BPT_ADDR), "Success", [1])
-    t.run_test(i2c.i2c_write_bytes(d_num, BPT_ADDR, [BPT_USER_REG, 50]),
+    t.run_test(i2c.read_byte(d_num, BPT_ADDR), "Success", [1])
+    t.run_test(i2c.write_bytes(d_num, BPT_ADDR, [BPT_USER_REG, 50]),
                "Success")
-    t.run_test(i2c.i2c_read_byte(d_num, BPT_ADDR), "Success", [50])
-    t.run_test(i2c.i2c_write_bytes(d_num, BPT_ADDR, [BPT_USER_REG+1, 51, 52]),
+    t.run_test(i2c.read_byte(d_num, BPT_ADDR), "Success", [50])
+    t.run_test(i2c.write_bytes(d_num, BPT_ADDR, [BPT_USER_REG+1, 51, 52]),
                "Success")
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 2), "Success", [51, 52])
-    t.run_test(i2c.i2c_write_bytes(d_num, BPT_ADDR, [BPT_USER_REG, 0, 1, 2]),
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 2), "Success", [51, 52])
+    t.run_test(i2c.write_bytes(d_num, BPT_ADDR, [BPT_USER_REG, 0, 1, 2]),
                "Success")
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 3), "Success", [0, 1, 2])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 3), "Success", [0, 1, 2])
 
-    t.run_test(i2c.i2c_write_bytes(d_num, BPT_ADDR-7, [47, 48, 49]), "Error")
+    t.run_test(i2c.write_bytes(d_num, BPT_ADDR-7, [47, 48, 49]), "Error")
 
-    t.run_test(i2c.i2c_release(d_num), "Success")
+    t.run_test(i2c.release(d_num), "Success")
     return t
 
 
@@ -267,18 +266,18 @@ def read_flag_test(i2c, bpt):
 
     d_num = 0
 
-    t.run_test(i2c.i2c_release(d_num), "Success")
-    t.run_test(i2c.i2c_acquire(d_num), "Success")
-    t.run_test(i2c.i2c_read_reg(d_num, BPT_ADDR, BPT_USER_REG), "Success", [0])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 4), "Success", [0])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 12), "Success", [1])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 8), "Success", [2])
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 8), "Error")
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 12), "Error")
-    t.skip_test("i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 4), Success, [0]")
-    t.skip_test("i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 4), Error, [0]")
+    t.run_test(i2c.release(d_num), "Success")
+    t.run_test(i2c.acquire(d_num), "Success")
+    t.run_test(i2c.read_reg(d_num, BPT_ADDR, BPT_USER_REG), "Success", [0])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1, 4), "Success", [0])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1, 12), "Success", [1])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1, 8), "Success", [2])
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1, 8), "Error")
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1, 12), "Error")
+    t.skip_test("i2c.read_bytes(d_num, BPT_ADDR, 1, 4), Success, [0]")
+    t.skip_test("i2c.read_bytes(d_num, BPT_ADDR, 1, 4), Error, [0]")
     t.skip_test("RESET DUT")
-    t.run_test(i2c.i2c_read_bytes(d_num, BPT_ADDR, 1, 1))
+    t.run_test(i2c.read_bytes(d_num, BPT_ADDR, 1, 1))
 
     return t
 
