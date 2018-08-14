@@ -1,0 +1,7 @@
+I2C_DNUM = 0
+I2C_ADDR = 85
+I2C_UREG = 152
+
+LIST__VAL_1 = [41]
+LIST__VAL_2 = [42, 43]
+LIST__VAL_3 = [44, 45, 46]
