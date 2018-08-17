@@ -25,6 +25,7 @@ Double Acquire Should Fail
     Should Not Contain  ${result['result']}     Success
 
 Double Acquire with Reset Should Not Fail
+    [Tags]  warn-if-failed
     ${result}=          I2C.Acquire
     Should Contain      ${result['result']}     Success
     BPT.Reset DuT
