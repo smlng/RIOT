@@ -14,6 +14,7 @@ Binary Should Exist
 
 Reset Application
     Run Process         make reset  shell=True  cwd=%{APPDIR}
+    Sleep               5
 
 Run Test
     [Arguments]         ${timeout}=30 secs
