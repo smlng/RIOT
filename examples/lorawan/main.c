@@ -74,6 +74,8 @@ static void _send_message(void)
         printf("Cannot send message '%s', ret code: %d\n", message, ret);
         return;
     }
+    LED2_TOGGLE;
+    LED3_TOGGLE;
     /* The send was successfully scheduled, now wait until the send cycle has
        completed and a reply is received from the MAC */
     semtech_loramac_recv(&loramac);
@@ -104,7 +106,10 @@ static void *sender(void *arg)
 int main(void)
 {
     puts("LoRaWAN Hello");
-
+    LED0_OFF;
+    LED1_OFF;
+    LED2_OFF;
+    LED3_ON;
     /* Convert identifiers and application key */
     fmt_hex_bytes(deveui, DEVEUI);
     fmt_hex_bytes(appeui, APPEUI);
@@ -129,7 +134,7 @@ int main(void)
         return 1;
     }
     puts("DONE");
-
+    LED1_ON;
     /* start the sender thread */
     sender_pid = thread_create(sender_stack, sizeof(sender_stack),
                                SENDER_PRIO, 0, sender, NULL, "sender");
