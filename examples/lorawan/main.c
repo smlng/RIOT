@@ -33,7 +33,7 @@
 #include "semtech_loramac.h"
 
 /* Messages are sent every 20s to respect the duty cycle on each channel */
-#define PERIOD              (20U)
+#define PERIOD              (30U)
 
 #define SENDER_PRIO         (THREAD_PRIORITY_MAIN - 1)
 static kernel_pid_t sender_pid;
@@ -41,7 +41,7 @@ static char sender_stack[THREAD_STACKSIZE_MAIN / 2];
 
 semtech_loramac_t loramac;
 
-static const char *message = "This is RIOT!";
+static const char *message = "Hello MONICA!";
 
 static uint8_t deveui[LORAMAC_DEVEUI_LEN];
 static uint8_t appeui[LORAMAC_APPEUI_LEN];
@@ -103,8 +103,7 @@ static void *sender(void *arg)
 
 int main(void)
 {
-    puts("LoRaWAN Class A low-power application");
-    puts("=====================================");
+    puts("LoRaWAN Hello");
 
     /* Convert identifiers and application key */
     fmt_hex_bytes(deveui, DEVEUI);
@@ -118,18 +117,18 @@ int main(void)
     semtech_loramac_set_appkey(&loramac, appkey);
 
     /* Use a fast datarate, e.g. BW125/SF7 in EU868 */
-    semtech_loramac_set_dr(&loramac, LORAMAC_DR_5);
+    semtech_loramac_set_dr(&loramac, LORAMAC_DR_3);
 
     /* Start the Over-The-Air Activation (OTAA) procedure to retrieve the
      * generated device address and to get the network and application session
      * keys.
      */
-    puts("Starting join procedure");
+    printf("Join LoRaWAN ... ");
     if (semtech_loramac_join(&loramac, LORAMAC_JOIN_OTAA) != SEMTECH_LORAMAC_JOIN_SUCCEEDED) {
-        puts("Join procedure failed");
+        puts("FAIL");
         return 1;
     }
-    puts("Join procedure succeeded");
+    puts("DONE");
 
     /* start the sender thread */
     sender_pid = thread_create(sender_stack, sizeof(sender_stack),
