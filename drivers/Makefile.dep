@@ -173,6 +173,7 @@ endif
 
 ifneq (,$(filter fs1000a,$(USEMODULE)))
   FEATURES_REQUIRED += periph_gpio
+  FEATURES_REQUIRED += periph_gpio_irq
   USEMODULE += xtimer
   USEMODULE += fmt
 endif

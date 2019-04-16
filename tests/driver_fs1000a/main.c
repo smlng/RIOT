@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FS1000A_PARAM_RECV_PIN      GPIO_PIN(0, 28)
+#define FS1000A_PARAM_RECV_PIN      GPIO_PIN(0, 0)
 
 #include "fs1000a.h"
 #include "fs1000a_params.h"
