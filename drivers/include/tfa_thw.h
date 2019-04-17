@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include "periph/gpio.h"
+#include "thread.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +42,12 @@ typedef struct {
  */
 typedef struct {
     tfa_thw_params_t p;
+    kernel_pid_t listener;
 } tfa_thw_t;
+
+typedef struct {
+    uint64_t values[2];
+} tfa_thw_sensor_data_t;
 
 typedef struct {
     int16_t t;

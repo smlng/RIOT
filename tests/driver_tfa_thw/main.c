@@ -25,6 +25,7 @@
 
 #include "tfa_thw.h"
 #include "tfa_thw_params.h"
+#include "fmt.h"
 #include "thread.h"
 #include "xtimer.h"
 
@@ -35,14 +36,24 @@ static tfa_thw_t dev;
 int main(void)
 {
     puts("Init TFA_THW");
+    dev.listener = thread_getpid();
     if (tfa_thw_init(&dev, &tfa_thw_params[0])) {
         puts("[FAILED]");
         return 1;
     }
 
+    char hexbuf[32];
+    puts("..INIT DONE..");
     while(1) {
-        xtimer_sleep(SLEEP_S);
-        puts("...alive...");
+        msg_t m;
+        msg_receive(&m);
+        tfa_thw_sensor_data_t data = *((tfa_thw_sensor_data_t *)m.content.ptr);
+        size_t len = fmt_u64_hex(hexbuf, data.values[0]);
+        hexbuf[len] = '\0';
+        printf("(%s, ", hexbuf);
+        len = fmt_u64_hex(hexbuf, data.values[1]);
+        hexbuf[len] = '\0';
+        printf("%s)\n", hexbuf);
     }
     return 0;
 }

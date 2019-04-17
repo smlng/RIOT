@@ -20,7 +20,6 @@
  */
 #include <string.h>
 
-#include "fmt.h"
 #include "msg.h"
 #include "periph/gpio.h"
 #include "thread.h"
@@ -33,7 +32,7 @@
 
 #define TFA_STACK_SIZE  (THREAD_STACKSIZE_DEFAULT)
 #define TFA_QUEUE_LEN   (32U)
-#define TFA_RECV_BUFLEN (140U)
+#define TFA_RECV_BUFLEN (132U)
 #define TFA_ZERO_US     (380U)      /* smaller is a 0 */
 #define TFA_ONE_US      (580U)      /* smaller is a 1, above is sync */
 #define TFA_PREAMBLE    (6U)
@@ -60,7 +59,7 @@ static void _isr_cb(void *arg)
     last = now;
 }
 
-static void _eval_buf(uint8_t *buf, unsigned len)
+static uint64_t _eval_buf(uint8_t *buf, unsigned len)
 {
     uint64_t u64 = 0;
     unsigned shift = 64;
@@ -71,16 +70,14 @@ static void _eval_buf(uint8_t *buf, unsigned len)
         DEBUG("%d%d", (int)v0, (int)v1);
         if (v0 == v1) {
             DEBUG("\n! %s: invalid encoding !\n", __func__);
-            return;
+            return 0;
         }
         if ((v0 == 1) && (v1 == 0)) {
             u64 |= 1ULL << shift;
         }
     }
-    char strbuf[32] = {0};
-    size_t slen = fmt_u64_hex(strbuf, u64);
-    strbuf[slen] = '\0';
-    DEBUG("\n%s: decoded %s\n", __func__, strbuf);
+    DEBUG("\n");
+    return u64;
 }
 
 void *_eventloop(void *arg)
@@ -91,11 +88,11 @@ void *_eventloop(void *arg)
 
     tfa_thw_t *dev = (tfa_thw_t *)arg;
 
-    uint8_t recvbuf[TFA_RECV_BUFLEN];
-    memset(recvbuf, 0, TFA_RECV_BUFLEN);
+    uint8_t recvbuf[TFA_RECV_BUFLEN] = { 0 };
     unsigned bufpos = 0;
     unsigned preamble = 0;
-
+    uint64_t v0 = 0;
+    uint64_t v1 = 0;
     while (1) {
         msg_t m;
         msg_receive(&m);
@@ -103,15 +100,35 @@ void *_eventloop(void *arg)
         if (val > TFA_ONE_US) {
             if (bufpos >= TFA_RECV_RAWLEN) {
                 gpio_irq_disable(dev->p.gpio);
-                _eval_buf(recvbuf, bufpos);
-                gpio_irq_enable(dev->p.gpio);
+                uint64_t v64 = _eval_buf(recvbuf, bufpos);
+                if (v64 > 0) {
+                    if (v0 == 0) {
+                        v0 = v64;
+                    }
+                    else if ((v1 == 0) && (v64 != v0)) {
+                        v1 = v64;
+                        if (dev->listener != KERNEL_PID_UNDEF) {
+                            msg_t n;
+                            tfa_thw_sensor_data_t data;
+                            data.values[0] = v0;
+                            data.values[1] = v1;
+                            n.content.ptr = &data;
+                            msg_send(&n, dev->listener);
+                        }
+                    }
+                    else if ((v0 > 0) && (v1 > 0) && (v64 != v1)) {
+                        v0 = v64;
+                        v1 = 0;
+                    }
+                }
                 preamble = 0;
                 bufpos = 0;
                 memset(recvbuf, 0, TFA_RECV_BUFLEN);
+                gpio_irq_enable(dev->p.gpio);
             }
             preamble++;
         }
-        else if (preamble > TFA_PREAMBLE) {
+        else if ((preamble > TFA_PREAMBLE) && (bufpos < TFA_RECV_BUFLEN)) {
             if (val > TFA_ZERO_US) {
                 recvbuf[bufpos] = 1;
             }
@@ -137,6 +154,7 @@ int tfa_thw_init(tfa_thw_t *dev, const tfa_thw_params_t *params)
         DEBUG("%s: thread_create failed!\n", __func__);
         return -1;
     }
+    xtimer_sleep(1);
     if (gpio_init_int(dev->p.gpio, GPIO_IN, GPIO_BOTH, _isr_cb, NULL) < 0) {
         DEBUG("%s: gpio_init_int failed!\n", __func__);
         return -2;
