@@ -77,7 +77,10 @@ static void _eval_buf(uint8_t *buf, unsigned len)
             u64 |= 1ULL << shift;
         }
     }
-    DEBUG("%s: decoded %" PRIx64 "\n", __func__, u64);
+    char strbuf[32] = {0};
+    size_t slen = fmt_u64_hex(strbuf, u64);
+    strbuf[slen] = '\0';
+    DEBUG("\n%s: decoded %s\n", __func__, strbuf);
 }
 
 void *_eventloop(void *arg)
