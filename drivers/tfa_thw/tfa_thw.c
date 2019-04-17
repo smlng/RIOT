@@ -32,7 +32,7 @@
 #include "debug.h"
 
 #define TFA_STACK_SIZE  (THREAD_STACKSIZE_DEFAULT)
-#define TFA_QUEUE_LEN   (16U)
+#define TFA_QUEUE_LEN   (140U)
 #define TFA_RECV_BUFLEN (140U)
 #define TFA_ZERO_US     (380U)      /* smaller is a 0 */
 #define TFA_ONE_US      (580U)      /* smaller is a 1, above is sync */
