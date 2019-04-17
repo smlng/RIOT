@@ -32,7 +32,7 @@
 #include "debug.h"
 
 #define TFA_STACK_SIZE  (THREAD_STACKSIZE_DEFAULT)
-#define TFA_QUEUE_LEN   (140U)
+#define TFA_QUEUE_LEN   (16U)
 #define TFA_RECV_BUFLEN (140U)
 #define TFA_ZERO_US     (380U)      /* smaller is a 0 */
 #define TFA_ONE_US      (580U)      /* smaller is a 1, above is sync */
@@ -85,10 +85,11 @@ static void _eval_buf(uint8_t *buf, unsigned len)
 
 void *_eventloop(void *arg)
 {
-    (void)arg;
     DEBUG("%s: enter\n", __func__);
 
     msg_init_queue(_queue, TFA_QUEUE_LEN);
+
+    tfa_thw_t *dev = (tfa_thw_t *)arg;
 
     uint8_t recvbuf[TFA_RECV_BUFLEN];
     memset(recvbuf, 0, TFA_RECV_BUFLEN);
@@ -101,7 +102,9 @@ void *_eventloop(void *arg)
         uint32_t val = m.content.value;
         if (val > TFA_ONE_US) {
             if (bufpos >= TFA_RECV_RAWLEN) {
+                gpio_irq_disable(dev->p.gpio);
                 _eval_buf(recvbuf, bufpos);
+                gpio_irq_enable(dev->p.gpio);
                 preamble = 0;
                 bufpos = 0;
                 memset(recvbuf, 0, TFA_RECV_BUFLEN);
@@ -129,7 +132,7 @@ int tfa_thw_init(tfa_thw_t *dev, const tfa_thw_params_t *params)
     epid = thread_create(_stack, sizeof(_stack),
                          THREAD_PRIORITY_MAIN - 1,
                          THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
-                         _eventloop, NULL, "tfa_thw");
+                         _eventloop, dev, "tfa_thw");
     if (epid < 0) {
         DEBUG("%s: thread_create failed!\n", __func__);
         return -1;
