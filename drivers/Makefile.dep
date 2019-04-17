@@ -178,6 +178,13 @@ ifneq (,$(filter fs1000a,$(USEMODULE)))
   USEMODULE += fmt
 endif
 
+ifneq (,$(filter tfa_thw,$(USEMODULE)))
+  FEATURES_REQUIRED += periph_gpio
+  FEATURES_REQUIRED += periph_gpio_irq
+  USEMODULE += xtimer
+  USEMODULE += fmt
+endif
+
 ifneq (,$(filter fxos8700,$(USEMODULE)))
   USEMODULE += xtimer
   FEATURES_REQUIRED += periph_i2c
