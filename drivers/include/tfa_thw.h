@@ -45,14 +45,34 @@ typedef struct {
     kernel_pid_t listener;
 } tfa_thw_t;
 
-typedef struct {
-    uint64_t values[2];
-} tfa_thw_sensor_data_t;
-
-typedef struct {
-    int16_t t;
-    int16_t h;
-    int16_t w;
+/**
+ * @brief TFA data struct for decoding 64Bit data
+ */
+typedef union {
+    uint64_t u64;
+    struct {
+        /* 0 Bit */
+        uint8_t csum        : 8;    /*<< check sum */
+        uint8_t humidity    : 8;    /*<< humidity, if type == 1, otherwise 0 */
+        /* 16 Bit */
+        uint8_t res1        : 4;     /*<< unused/unknown, mostly 0000 */
+        /**
+         * @brief Temperature (in C) or wind (in kph) scaled by 10
+         *
+         * Temperature, if type == 1; Wind, if type == 2
+         * Temperature has offset of +500
+         * Either value is scaled by 10.0
+         */
+        uint16_t tempwind : 12;
+        /* 32 BIT */
+        uint8_t type        : 2;    /*<< data type, 1=b01=temp, 2=b10=wind */
+        uint8_t res2        : 2;    /*<< unused/unknown */
+        uint8_t chan        : 2;    /*<< channel, mostly 00 */
+        uint8_t res3        : 1;    /*<< unused/unknown */
+        uint8_t volt        : 1;    /*<< battery level, 0=okay, 1=low */
+        uint32_t id         : 20;   /*<< device id, randomly generated */
+        uint8_t res4        : 4;    /*<< unused/unknown, mostly 0000 */
+    };
 } tfa_thw_data_t;
 
 /**

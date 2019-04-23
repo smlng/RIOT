@@ -30,6 +30,24 @@
 #define ENABLE_DEBUG    (1)
 #include "debug.h"
 
+
+#define TFA_DEVID_S         (40U)
+#define TFA_DEVID_M         (0xFFFFF)
+#define TFA_VOLT_S          (39U)
+#define TFA_VOLT_M          (0x1)
+#define TFA_CHAN_S          (36U)
+#define TFA_CHAN_M          (0x7)
+#define TFA_MSGID_S         (32U)
+#define TFA_MSGID_M         (0x3)
+#define TFA_WIND_S          (20U)
+#define TFA_WIND_M          (0xFFF)
+#define TFA_TEMP_S          (20U)
+#define TFA_TEMP_M          (0xFFF)
+#define TFA_HUM_S           (8U)
+#define TFA_HUM_M           (0xFF)
+#define TFA_CRC_S           (0U)
+#define TFA_CRC_M           (0xFF)
+
 #define TFA_STACK_SIZE  (THREAD_STACKSIZE_DEFAULT)
 #define TFA_QUEUE_LEN   (32U)
 #define TFA_RECV_BUFLEN (132U)
@@ -87,12 +105,13 @@ void *_eventloop(void *arg)
     msg_init_queue(_queue, TFA_QUEUE_LEN);
 
     tfa_thw_t *dev = (tfa_thw_t *)arg;
+    tfa_thw_data_t data;
+    data.u64 = 0;
 
     uint8_t recvbuf[TFA_RECV_BUFLEN] = { 0 };
     unsigned bufpos = 0;
     unsigned preamble = 0;
-    uint64_t v0 = 0;
-    uint64_t v1 = 0;
+
     while (1) {
         msg_t m;
         msg_receive(&m);
@@ -101,24 +120,15 @@ void *_eventloop(void *arg)
             if (bufpos >= TFA_RECV_RAWLEN) {
                 gpio_irq_disable(dev->p.gpio);
                 uint64_t v64 = _eval_buf(recvbuf, bufpos);
-                if (v64 > 0) {
-                    if (v0 == 0) {
-                        v0 = v64;
-                    }
-                    else if ((v1 == 0) && (v64 != v0)) {
-                        v1 = v64;
-                        if (dev->listener != KERNEL_PID_UNDEF) {
-                            msg_t n;
-                            tfa_thw_sensor_data_t data;
-                            data.values[0] = v0;
-                            data.values[1] = v1;
-                            n.content.ptr = &data;
-                            msg_send(&n, dev->listener);
-                        }
-                    }
-                    else if ((v0 > 0) && (v1 > 0) && (v64 != v1)) {
-                        v0 = v64;
-                        v1 = 0;
+                if ((v64 != data.u64) && (dev->listener != KERNEL_PID_UNDEF)) {
+                    data.u64 = v64;
+                    DEBUG("(%"PRIu32", %u, %u, %u, %"PRIu16", %u, %u)\n",
+                          data.id, data.volt, data.chan, data.type,
+                          data.tempwind, data.humidity, data.csum);
+                    if (data.type > 0) {
+                        msg_t n;
+                        n.content.ptr = &data;
+                        msg_send(&n, dev->listener);
                     }
                 }
                 preamble = 0;

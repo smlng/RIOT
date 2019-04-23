@@ -21,8 +21,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TFA_THW_PARAM_GPIO      GPIO_PIN(0, 0)
-
 #include "tfa_thw.h"
 #include "tfa_thw_params.h"
 #include "fmt.h"
@@ -35,25 +33,22 @@ static tfa_thw_t dev;
 
 int main(void)
 {
-    puts("Init TFA_THW");
+    printf("Init TFA_THW ... ");
     dev.listener = thread_getpid();
     if (tfa_thw_init(&dev, &tfa_thw_params[0])) {
-        puts("[FAILED]");
+        puts("[FAIL]");
         return 1;
     }
+    puts("[DONE]");
 
     char hexbuf[32];
-    puts("..INIT DONE..");
     while(1) {
         msg_t m;
         msg_receive(&m);
-        tfa_thw_sensor_data_t data = *((tfa_thw_sensor_data_t *)m.content.ptr);
-        size_t len = fmt_u64_hex(hexbuf, data.values[0]);
+        tfa_thw_data_t data = *((tfa_thw_data_t *)m.content.ptr);
+        size_t len = fmt_u64_hex(hexbuf, data.u64);
         hexbuf[len] = '\0';
-        printf("(%s, ", hexbuf);
-        len = fmt_u64_hex(hexbuf, data.values[1]);
-        hexbuf[len] = '\0';
-        printf("%s)\n", hexbuf);
+        printf("%s\n", hexbuf);
     }
     return 0;
 }
