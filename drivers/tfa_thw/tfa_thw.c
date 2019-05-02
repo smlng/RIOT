@@ -59,13 +59,22 @@ static mutex_t _lock = MUTEX_INIT;
 
 static volatile kernel_pid_t epid = KERNEL_PID_UNDEF;
 static volatile kernel_pid_t lpid = KERNEL_PID_UNDEF;
+
+#define DBG_GPIO    GPIO_PIN(2, 4)
+#define DBG_PORT    GPIOC
+#define DBG_MASK    (1 << 4)
+
+#define DBG_ON             (DBG_PORT->BSRR = DBG_MASK)
+#define DBG_OFF            (DBG_PORT->BSRR = (DBG_MASK << 16))
+#define DBG_TOGGLE         (DBG_PORT->ODR  ^= DBG_MASK)
+
 /**
  * @brief   Interrupt callback
  */
 static void _isr_cb(void *arg)
 {
     (void) arg;
-
+    DBG_TOGGLE;
     uint32_t now = xtimer_now_usec();
     msg_t m;
     m.content.value = (uint32_t)(now - last);
@@ -187,6 +196,8 @@ int tfa_thw_init(tfa_thw_t *dev, const tfa_thw_params_t *params)
         DEBUG("%s: thread_create failed!\n", __func__);
         return 1;
     }
+    gpio_init(DBG_GPIO, GPIO_OUT);
+    DBG_ON;
     /* short wait to ensure _eventloop is ready to receive */
     xtimer_sleep(TFA_THW_INIT_WAIT);
     if (gpio_init_int(dev->p.gpio, GPIO_IN, GPIO_BOTH, _isr_cb, NULL) < 0) {
