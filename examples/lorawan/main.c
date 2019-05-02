@@ -26,6 +26,7 @@
 #include "msg.h"
 #include "thread.h"
 #include "fmt.h"
+#include "xtimer.h"
 
 #include "periph/rtc.h"
 
@@ -89,7 +90,7 @@ static void *sender(void *arg)
 
     while (1) {
         msg_receive(&msg);
-
+        LED0_TOGGLE;
         /* Trigger the message send */
         _send_message();
 
@@ -124,10 +125,25 @@ int main(void)
      * generated device address and to get the network and application session
      * keys.
      */
+    LED0_ON;
     puts("Starting join procedure");
-    if (semtech_loramac_join(&loramac, LORAMAC_JOIN_OTAA) != SEMTECH_LORAMAC_JOIN_SUCCEEDED) {
+    while (semtech_loramac_join(&loramac, LORAMAC_JOIN_OTAA) != SEMTECH_LORAMAC_JOIN_SUCCEEDED) {
         puts("Join procedure failed");
-        return 1;
+        LED0_OFF;
+        xtimer_usleep(200000);
+        LED0_ON;
+        xtimer_usleep(200000);
+        LED0_OFF;
+        xtimer_usleep(200000);
+        LED0_ON;
+        xtimer_usleep(200000);
+        LED0_OFF;
+        xtimer_usleep(200000);
+        LED0_ON;
+        xtimer_usleep(200000);
+        LED0_OFF;
+        xtimer_sleep(10);
+        LED0_ON;
     }
     puts("Join procedure succeeded");
 
