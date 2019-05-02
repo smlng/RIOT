@@ -26,7 +26,7 @@
 #include "periph_cpu.h"
 #include "periph_conf.h"
 
-#define ENABLE_DEBUG (0)
+#define ENABLE_DEBUG        (1)
 #include "debug.h"
 
 /**
@@ -220,6 +220,7 @@ int gpio_init_int(gpio_t pin, gpio_mode_t mode, gpio_flank_t flank,
 
 void gpio_irq_enable(gpio_t pin)
 {
+    DEBUG("%s: %u\n", __func__, (unsigned)(EXTI->PR & (1 << _pin_num(pin))));
     EXTI->IMR |= (1 << _pin_num(pin));
 }
 
