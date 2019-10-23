@@ -51,6 +51,8 @@ typedef struct {
  */
 typedef struct {
     tfa_thw_params_t p;     /**< device parameters */
+    tfa_thw_cb_t cb;        /**< callback function */
+    kernel_pid_t epid;      /**< pid of event loop thread */
 } tfa_thw_t;
 
 /**
@@ -78,7 +80,22 @@ typedef union {
         uint32_t id         : 20;   /**< device id, randomly generated */
         uint8_t res4        : 4;    /**< unused/unknown, mostly 0000 */
     };
+} tfa_thw_msg_t;
+
+typedef struct {
+    uint32_t deviceid;
+    uint16_t windspeed;
+    int16_t temperature;
+    uint8_t humidity;
+    bool battery;
 } tfa_thw_data_t;
+
+/**
+ * @brief   Signature of event callback functions triggered from interrupts
+ *
+ * @param[out] data         latest sensor data
+ */
+typedef void (*tfa_thw_cb_t)(tfa_thw_data_t *data);
 
 /**
  * @brief Initialize sensor receiver
@@ -91,13 +108,29 @@ typedef union {
 int tfa_thw_init(tfa_thw_t *dev, const tfa_thw_params_t *params);
 
 /**
+ * @brief Enable continuous measurement
+ *
+ * @param[in] dev           device descriptor
+ * @param[in] cb            callback function
+ */
+void tfa_thw_enable(tfa_thw_t *dev, tfa_thw_cb_t cb);
+
+/**
+ * @brief Disable continuous measurement
+ *
+ * @param[in] dev           device descriptor
+ */
+void tfa_thw_disable(tfa_thw_t *dev);
+
+/**
  * @brief Read data from sensor
  *
  * @param[in] dev           device descriptor
  * @param[out] data         buffer array to hold data
  * @param[in] dlen          buffer elements
  *
- * @return 0 on success, error otherwise
+ * @return >=0 on success, i.e. number of data elements read
+ * @return <0 on error
  */
 int tfa_thw_read(tfa_thw_t *dev, tfa_thw_data_t data[], size_t dlen);
 

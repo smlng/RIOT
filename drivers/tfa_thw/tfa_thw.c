@@ -47,7 +47,8 @@
 /* number of sync symbols before eval */
 #define TFA_THW_PREAMBLE    (6U)
 /* IPC message type for internal demuxing */
-#define TFA_THW_MSG_TYPE    (0x6583)
+#define TFA_THW_MSG_DATA    (0x6583)
+#define TFA_THW_MSG_STOP    (0x6584)
 /* Wait/sleep time between thread create and gpio init */
 #define TFA_THW_INIT_WAIT   (2U)
 
@@ -77,6 +78,7 @@ static void _isr_cb(void *arg)
     DBG_TOGGLE;
     uint32_t now = xtimer_now_usec();
     msg_t m;
+    m.type = TFA_THW_MSG_DATA;
     m.content.value = (uint32_t)(now - last);
 
     if (epid > KERNEL_PID_UNDEF) {
@@ -130,55 +132,66 @@ void *_eventloop(void *arg)
     unsigned bufpos = 0;
     unsigned preamble = 0;
 
+    if (gpio_init_int(dev->p.gpio, GPIO_IN, GPIO_BOTH, _isr_cb, NULL) < 0) {
+        DEBUG("%s: gpio_init_int failed!\n", __func__);
+        return NULL;
+    }
+
     while (1) {
         msg_t m;
         msg_receive(&m);
-        uint32_t val = m.content.value;
-        /* large time interval means sync or keep alive */
-        if (val > TFA_THW_ONE_US) {
-            /* eval buffer, if enough data was received */
-            if (bufpos >= TFA_THW_RECV_RAWLEN) {
-                DEBUG("tfa_thw: gpio_irq_disable ...");
-                gpio_irq_disable(dev->p.gpio);
-                DEBUG("[DONE]\n");
-                tfa_thw_data_t data;
-                data.u64 = _eval_buf(recvbuf, bufpos);
-                DEBUG("tfa_thw: data(%"PRIx32", %u, %u, %u, %"PRIu16", %u, %u)\n",
-                      (uint32_t)data.id, data.volt, data.chan, data.type,
-                      data.tempwind, data.humidity, data.csum);
-                if ((data.type > 0) && (data.u64 != last.u64) && (lpid != KERNEL_PID_UNDEF)) {
-                    last.u64 = data.u64;
-                    DEBUG("tfa_thw: sending data to listener ...");
-                    msg_t n;
-                    n.type = TFA_THW_MSG_TYPE;
-                    n.content.ptr = &last;
-                    msg_send(&n, lpid);
+        if (m.type == TFA_THW_MSG_STOP) {
+            DEBUG("tfa_thw: stop event loop!\n");
+            break;
+        }
+        else if (m.type = TFA_THW_MSG_DATA) {
+            uint32_t val = m.content.value;
+            /* large time interval means sync or keep alive */
+            if (val > TFA_THW_ONE_US) {
+                /* eval buffer, if enough data was received */
+                if (bufpos >= TFA_THW_RECV_RAWLEN) {
+                    DEBUG("tfa_thw: gpio_irq_disable ...");
+                    gpio_irq_disable(dev->p.gpio);
+                    DEBUG("[DONE]\n");
+                    tfa_thw_msg_t msg;
+                    msg.u64 = _eval_buf(recvbuf, bufpos);
+                    DEBUG("tfa_thw: msg(%"PRIx32", %u, %u, %u, %"PRIu16", %u, %u)\n",
+                          (uint32_t)msg.id, msg.volt, msg.chan, msg.type,
+                          msg.tempwind, msg.humidity, msg.csum);
+                    if ((msg.type > 0) && (msg.u64 != last.u64) && (dev->cb != NULL)) {
+                        last.u64 = msg.u64;
+                        DEBUG("tfa_thw: sending data to listener ...");
+                        dev->cb(&last_data);
+                        DEBUG("[DONE]\n");
+                    }
+                    /* reset intermediate vars and buffer */
+                    preamble = 0;
+                    bufpos = 0;
+                    memset(recvbuf, 0, TFA_THW_RECV_BUFLEN);
+                    DEBUG("tfa_thw: gpio_irq_enable ...");
+                    gpio_irq_enable(dev->p.gpio);
                     DEBUG("[DONE]\n");
                 }
-                /* reset intermediate vars and buffer */
+                preamble++;
+            }
+            else if ((preamble > TFA_THW_PREAMBLE) &&
+                     (bufpos < TFA_THW_RECV_BUFLEN)) {
+                /* decode time interval into 0 and 1 */
+                if (val > TFA_THW_ZERO_US) {
+                    recvbuf[bufpos] = 1;
+                }
+                bufpos++;
+            }
+            else {
+                /* bogos data, reset vars and buffer */
                 preamble = 0;
                 bufpos = 0;
                 memset(recvbuf, 0, TFA_THW_RECV_BUFLEN);
-                DEBUG("tfa_thw: gpio_irq_enable ...");
-                gpio_irq_enable(dev->p.gpio);
-                DEBUG("[DONE]\n");
             }
-            preamble++;
-        }
-        else if ((preamble > TFA_THW_PREAMBLE) && (bufpos < TFA_THW_RECV_BUFLEN)) {
-            /* decode time interval into 0 and 1 */
-            if (val > TFA_THW_ZERO_US) {
-                recvbuf[bufpos] = 1;
-            }
-            bufpos++;
-        }
-        else {
-            /* bogos data, reset vars and buffer */
-            preamble = 0;
-            bufpos = 0;
-            memset(recvbuf, 0, TFA_THW_RECV_BUFLEN);
         }
     }
+    DEBUG("tfa_thw: de-initialize GPIO, set to output.\n");
+    gpio_init(dev->p.gpio, GPIO_OUT);
 }
 
 int tfa_thw_init(tfa_thw_t *dev, const tfa_thw_params_t *params)
@@ -186,26 +199,29 @@ int tfa_thw_init(tfa_thw_t *dev, const tfa_thw_params_t *params)
     DEBUG("%s: enter\n", __func__);
 
     dev->p = *params;
-    /* create _eventloop thread */
-    epid = thread_create(_stack, sizeof(_stack),
-                         THREAD_PRIORITY_MAIN - 1,
-                         THREAD_CREATE_STACKTEST,
-                         _eventloop, dev, "tfa_thw");
-
-    if (epid < 0) {
-        DEBUG("%s: thread_create failed!\n", __func__);
-        return 1;
-    }
-    gpio_init(DBG_GPIO, GPIO_OUT);
-    DBG_ON;
-    /* short wait to ensure _eventloop is ready to receive */
-    xtimer_sleep(TFA_THW_INIT_WAIT);
-    if (gpio_init_int(dev->p.gpio, GPIO_IN, GPIO_BOTH, _isr_cb, NULL) < 0) {
-        DEBUG("%s: gpio_init_int failed!\n", __func__);
-        return 2;
-    }
+    dev->epid = KERNEL_PID_UNDEF;
+    dev->cb = NULL;
 
     return 0;
+}
+
+void tfa_thw_enable(tfa_thw_t *dev, tfa_thw_cb_t cb)
+{
+    /* create _eventloop thread */
+    dev->epid = thread_create(_stack, sizeof(_stack),
+                              THREAD_PRIORITY_MAIN - 1,
+                              THREAD_CREATE_STACKTEST,
+                              _eventloop, dev, "tfa_thw");
+}
+
+void tfa_thw_disable(tfa_thw_t *dev)
+{
+    if (dev->epid != KERNEL_PID_UNDEF) {
+        msg_t m;
+        m.type = TFA_THW_MSG_STOP;
+        msg_send(&m, dev->epid);
+        dev->epid = KERNEL_PID_UNDEF;
+    }
 }
 
 int tfa_thw_read(tfa_thw_t *dev, tfa_thw_data_t *data, size_t dlen)
